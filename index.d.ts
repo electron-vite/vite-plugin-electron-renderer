@@ -5,12 +5,10 @@ export default electronRenderer;
 
 export interface Options {
   /**
-   * Explicitly include some CJS modules  
-   * e.g.  
-   * - Nested package name: `foo/bar/baz`
-   * - User's module: `./foo`
+   * Explicitly include/exclude some CJS modules  
+   * `modules` includes `dependencies` of package.json, Node.js's `builtinModules` and `electron`  
    */
-  dependencies?: string[]
+  resolve?: (modules: string[]) => typeof modules | undefined
 }
 
 export interface VitePluginElectronRenderer {

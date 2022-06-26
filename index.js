@@ -7,9 +7,10 @@ const { builtinModules } = require('module');
  */
 module.exports = function renderer(options = {}) {
   const name = 'vite-plugin-electron-renderer';
-  const builtins = builtinModules.filter(e => !e.startsWith('_'));
+  const builtins = builtinModules.filter(e => !e.startsWith('_')).map(e => [e, `node:${e}`]).flat();
   // dependencies of package.json
-  const dependencies = options.dependencies || [];
+  const dependencies = [];
+  let modules = [];
   const moduleCache = new Map();
   /**
    * @type {import('vite').ResolvedConfig}
@@ -28,10 +29,14 @@ module.exports = function renderer(options = {}) {
           // TODO: Nested package name
           dependencies.push(...Object.keys(pkg.dependencies || {}));
         }
+        modules = builtins.concat(dependencies);
+        if (options.resolve) {
+          const tmp = options.resolve(modules);
+          if (tmp) modules = tmp;
+        }
       },
       resolveId(source) {
         const id = source.replace('node:', '');
-        const modules = builtins.concat(dependencies);
         if (modules.includes(id)) return id;
       },
       load(id) {
@@ -75,7 +80,6 @@ module.exports = function renderer(options = {}) {
          * 需要注意的一点是，Node.js 模块作为项目的依赖，应该放到 `dependencies` 中；除非你知道如何使用 Vite 构建他们。  
          */
 
-        const modules = builtins.concat(dependencies);
         if (modules.includes(id)) {
           const cache = moduleCache.get(id);
           if (cache) return cache;
@@ -146,9 +150,7 @@ ${exportMembers}
 
         // Rollup ---- external ----
         let external = config.build.rollupOptions.external;
-        const electronBuiltins = builtins.map(e => [e, `node:${e}`]).flat()
-          .concat('electron')
-          .concat(dependencies);
+        const electronBuiltins = modules.concat('electron');
         if (
           Array.isArray(external) ||
           typeof external === 'string' ||
