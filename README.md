@@ -56,8 +56,8 @@ The easiest way
 - Put Node.js packages in `dependencies`
 - Put web packages in `devDependencies`
 
-In general, Vite may not be able to correctly build Node.js packages, especially C/C++ native modules, but Vite can load them as external packages.  
-*通常的，Vite 可能不能正确的构建 Node.js 的包，尤其是 C/C++ 原生模块，但是 Vite 可以将它们以外部包的形式加载。*  
+In general, Vite may not be able to correctly build Node.js packages, especially C/C++ native modules, but Vite can load them as external packages. So, put your Node.js package in `dependencies`.  
+*通常的，Vite 可能不能正确的构建 Node.js 的包，尤其是 C/C++ 原生模块，但是 Vite 可以将它们以外部包的形式加载。所以，请将 Node.js 包放到 `dependencies` 中*  
 
 e.g.
 
@@ -82,6 +82,8 @@ export const ipcRenderer = electron.ipcRenderer
 // and it doesn't seem to have changed :)
 import { ipcRenderer } from 'electron'
 ```
+
+[See more about Vite loading Node.js modules 👉](https://github.com/electron-vite/vite-plugin-electron-renderer/blob/32acf9a0ed2143a4f05cbbce351b26c01f488490/index.js#L45)
 
 ## How to work
 
