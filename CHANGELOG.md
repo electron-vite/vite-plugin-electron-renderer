@@ -1,4 +1,9 @@
 
+## [2022-06-27] v0.4.1
+
+- a7a41a4 docs: v0.4.1
+- 62b7584 feat: try resolve `package.json` from `process.cwd()`
+
 ## [2022-06-26] v0.4.0
 
 - 87da81f docs: v0.4.0
