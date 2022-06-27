@@ -51,10 +51,10 @@ export interface Options {
 
 ## `dependencies` vs `devDependencies`
 
-The simplest way
+The easiest way
 
-- Node.js package in `dependencies` of `package.josn`
-- Web package in `devDependencies` of `package.josn`
+- Put Node.js packages in `dependencies`
+- Put web packages in `devDependencies`
 
 In general, Vite may not be able to correctly build Node.js packages, especially C/C++ native modules, but Vite can load them as external packages.  
 *通常的，Vite 可能不能正确的构建 Node.js 的包，尤其是 C/C++ 原生模块，但是 Vite 可以将它们以外部包的形式加载。*  
