@@ -23,7 +23,10 @@ module.exports = function renderer(options = {}) {
       enforce: 'pre',
       configResolved(config) {
         // Resolve package.json dependencies
-        const pkgId = path.join(config.root, 'package.json');
+        let pkgId = path.join(config.root, 'package.json');
+        if (!fs.existsSync(pkgId)) {
+          pkgId = path.join(process.cwd(), 'package.json');
+        }
         if (fs.existsSync(pkgId)) {
           const pkg = require(pkgId);
           // TODO: Nested package name
