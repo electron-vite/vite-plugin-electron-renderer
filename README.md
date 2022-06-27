@@ -49,6 +49,40 @@ export interface Options {
 }
 ```
 
+## dependencies vs devDependencies
+
+The simplest way
+
+- Node.js package in `dependencies` of `package.josn`
+- Web package in `devDependencies` of `package.josn`
+
+In general, Vite may not be able to correctly build Node.js packages, especially C/C++ native modules, but Vite can load them as external packages.  
+*通常的，Vite 可能不能正确的构建 Node.js 的包，尤其是 C/C++ 原生模块，但是 Vite 可以将它们以外部包的形式加载。*  
+
+e.g.
+
+Electron-Main
+
+```js
+import { ipcMain } from 'electron'
+↓
+const { ipcMain } = require('electron')
+```
+
+Electron-Renderer
+
+```js
+import { ipcRenderer } from 'electron'
+↓
+// Generate a virtual module by vite-plugin-reaolve
+const electron = require('electron')
+export const ipcRenderer = electron.ipcRenderer
+↓
+// The following code snippet will work in Electron-Renderer, 
+// and it doesn't seem to have changed :)
+import { ipcRenderer } from 'electron'
+```
+
 ## How to work
 
 Using Electron API in Electron-Renderer
