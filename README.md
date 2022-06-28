@@ -105,7 +105,7 @@ import { ipcRenderer } from 'vite-plugin-electron-renderer/electron-renderer.js'
 
   * `base = './'`
   * `build.assetsDir = ''` -> *TODO: Automatic splicing `build.assetsDir`*
-  * `build.emptyOutDir = false`
+  * ~~`build.emptyOutDir = false`~~
   * `build.cssCodeSplit = false`
   * `build.rollupOptions.output.format = 'cjs'`
   * `resolve.conditions = ['node']`
