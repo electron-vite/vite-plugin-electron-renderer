@@ -21,6 +21,9 @@ module.exports = function buildConfig() {
 
       // https://github.com/electron-vite/electron-vite-vue/issues/107
       if (config.build.cssCodeSplit === undefined) config.build.cssCodeSplit = false;
+
+      // prevent accidental clearing of `dist/electron/main`, `dist/electron/preload`
+      if (config.build.emptyOutDir === undefined) config.build.emptyOutDir = false;
     },
   };
 };
