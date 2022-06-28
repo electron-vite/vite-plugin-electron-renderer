@@ -83,7 +83,7 @@ export const ipcRenderer = electron.ipcRenderer
 import { ipcRenderer } from 'electron'
 ```
 
-[See more about Vite loading Node.js package 👉](https://github.com/electron-vite/vite-plugin-electron-renderer/blob/32acf9a0ed2143a4f05cbbce351b26c01f488490/index.js#L45)
+> [👉 See more about Vite loading Node.js package](https://github.com/electron-vite/vite-plugin-electron-renderer/blob/2bb38a1dbd50b462d33cbc314bb5db71119b52cf/plugins/use-node.js/index.js#L91)
 
 ## How to work
 
@@ -93,10 +93,8 @@ Using Electron API in Electron-Renderer
 import { ipcRenderer } from 'electron'
 ↓
 // Actually will redirect by `resolve.alias`
-import { ipcRenderer } from 'vite-plugin-electron-renderer/electron-renderer.js'
+import { ipcRenderer } from 'vite-plugin-electron-renderer/plugins/use-node.js/electron-renderer.js'
 ```
-
-[Using Node.js API and package in Electron-Renderer 👉](https://github.com/electron-vite/vite-plugin-electron-renderer/blob/4a2620d9ff9b3696cf55c1c5d4f2acdcf1ff806a/index.js#L37)
 
 #### Config presets
 
