@@ -66,33 +66,49 @@ By default, `vite-plugin-electron-renderer` treats packages in `dependencies` as
 
 **e.g.**
 
-Electron-Main
+###### Electron-Main
 
 ```js
-import { ipcMain } from 'electron'
+import { readFile } from 'fs'
 ↓
-const { ipcMain } = require('electron')
+const { readFile } = require('fs')
 ```
 
-Electron-Renderer
+###### Electron-Renderer(vite build)
 
 ```js
-import { ipcRenderer } from 'electron'
-
-// ---- development(vite serve) ----
-// Generate a virtual module by load-hook
-const electron = require('electron')
-export const ipcRenderer = electron.ipcRenderer
+import { readFile } from 'fs'
 ↓
-// The following code snippet will work in Electron-Renderer, 
-// and it doesn't seem to have changed :)
-import { ipcRenderer } from 'electron'
-
-// ---- build(vite build) ----
-const { ipcRenderer } = require('electron')
+const { readFile } = require('fs')
 ```
 
-> [👉 See more about Vite loading Node.js package](https://github.com/electron-vite/vite-plugin-electron-renderer/blob/2bb38a1dbd50b462d33cbc314bb5db71119b52cf/plugins/use-node.js/index.js#L91)
+###### Electron-Renderer(vite serve)
+
+```
+┏———————————————————————————————┓                        ┏—————————————————┓
+│ import { readFile } from 'fs' │                        │ Vite dev server │
+┗———————————————————————————————┛                        ┗—————————————————┛
+               │                                                  │
+               │ 1. HTTP(Request): fs module                      │
+               │ ———————————————————————————————————————————————> │
+               │                                                  │
+               │                                                  │
+               │ 2. Intercept in load-hook(vite-plugin-electron)  │
+               │ 3. Generate a virtual module(fs)                 │
+               │                                                  │
+               │    const _M_ = require('fs')                     │
+               │    export const readFile = _M_.readFile          │
+               │                                                  │
+               │                                                  │
+               │ 4. HTTP(Response): fs module                     │
+               │ <——————————————————————————————————————————————— │
+               │                                                  │
+┏———————————————————————————————┓                        ┏—————————————————┓
+│ import { readFile } from 'fs' │                        │ Vite dev server │
+┗———————————————————————————————┛                        ┗—————————————————┛
+```
+
+> [👉 See Vite loading Node.js package source code.](https://github.com/electron-vite/vite-plugin-electron-renderer/blob/2bb38a1dbd50b462d33cbc314bb5db71119b52cf/plugins/use-node.js/index.js#L91)
 
 ## How to work
 
