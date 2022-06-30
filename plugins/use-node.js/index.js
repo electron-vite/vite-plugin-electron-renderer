@@ -177,7 +177,17 @@ function initModules(config, options) {
   const pkgId = lookupFile('package.json', [root, cwd])
   if (pkgId) {
     const pkg = require(pkgId);
-    const deps = Object.keys(pkg.dependencies || {});
+    const deps = Object
+      .keys(pkg.dependencies || {})
+      .filter(p => {
+        const _pkgId = lookupFile('package.json', [root, cwd].map(r => `${r}/node_modules/${p}`));
+        if (_pkgId) {
+          const _pkg = require(_pkgId);
+          // exclude ESM package
+          return _pkg.type !== 'module';
+        }
+        return true;
+      });
     // TODO: Nested package name
     dependencies.push(...deps);
   }
