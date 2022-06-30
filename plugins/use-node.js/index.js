@@ -157,21 +157,31 @@ ${exportMembers}
  * @type {(config: import('vite').ResolvedConfig, options: import('.').Options) => string[]}
  */
 function initModules(config, options) {
+  const root = config.root;
+  const cwd = process.cwd();
   const builtins = builtinModules.filter(e => !e.startsWith('_')).map(e => [e, `node:${e}`]).flat();
   // dependencies of package.json
   const dependencies = [];
   let modules = [];
 
+  const lookupFile = (filename, paths) => {
+    for (const p of paths) {
+      const _path = path.join(p, filename);
+      if (fs.existsSync(_path)) {
+        return _path;
+      }
+    }
+  };
+
   // Resolve package.json dependencies
-  let pkgId = path.join(config.root, 'package.json');
-  if (!fs.existsSync(pkgId)) {
-    pkgId = path.join(process.cwd(), 'package.json');
-  }
-  if (fs.existsSync(pkgId)) {
+  const pkgId = lookupFile('package.json', [root, cwd])
+  if (pkgId) {
     const pkg = require(pkgId);
+    const deps = Object.keys(pkg.dependencies || {});
     // TODO: Nested package name
-    dependencies.push(...Object.keys(pkg.dependencies || {}));
+    dependencies.push(...deps);
   }
+
   modules = builtins.concat(dependencies);
   if (options.resolve) {
     const tmp = options.resolve(modules);
