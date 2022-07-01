@@ -191,7 +191,7 @@ function resolveModules(config, options) {
         }
       }
 
-      // TODO: Nested package name
+      // TODO: Nested package name, but you can explicity include it by `options.resolve`
       dependencies.push(package);
     }
   }
