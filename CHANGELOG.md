@@ -1,4 +1,14 @@
 
+## [2022-07-01] v0.5.1
+
+- ec224db refactor: optimize code
+- f0efdfb fix(🐞): exclude ESM package
+- f3e6b2c chore: optimize code
+- 66df43b docs: update
+- e2afb1e docs: `Electron-Renderer(vite serve)` flow chart
+- 329056f docs: `dependencies` vs `devDependencies`
+- d9734c9 Update README.md
+
 ## [2022-06-28] v0.5.0
 
 - 6f3d745 fix(🐞): `require('fs')`
