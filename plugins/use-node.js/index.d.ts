@@ -6,7 +6,7 @@ export default useNodeJs;
 export interface Options {
   /**
    * Explicitly include/exclude some CJS modules  
-   * `modules` includes `dependencies` of package.json, Node.js's `builtinModules` and `electron`  
+   * `modules` includes `dependencies` of package.json  
    */
   resolve?: (modules: string[]) => typeof modules | undefined
 }

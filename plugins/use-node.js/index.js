@@ -6,7 +6,10 @@ const { builtinModules } = require('module');
  * @type {import('.').UseNodeJs}
  */
 module.exports = function useNodeJs(options = {}) {
-  let modules = [];
+  const builtins = [];
+  const dependencies = [];
+  const ESM_deps = [];
+  const CJS_modules = []; // builtins + dependencies
   const moduleCache = new Map();
 
   return {
@@ -20,7 +23,7 @@ module.exports = function useNodeJs(options = {}) {
         if (!config.resolve) config.resolve = {};
 
         // TODO: Compatible ESM module
-        // If the package is ESM module, like node-fetch, execa
+        // If the package is ESM module, like node-fetch
         if (!config.resolve.conditions) config.resolve.conditions = ['node'];
 
         if (!config.resolve.alias) config.resolve.alias = [];
@@ -46,7 +49,7 @@ module.exports = function useNodeJs(options = {}) {
 
         // Rollup ---- external ----
         let external = config.build.rollupOptions.external;
-        const electronBuiltins = modules.concat('electron');
+        const electronBuiltins = CJS_modules.concat('electron');
         if (
           Array.isArray(external) ||
           typeof external === 'string' ||
@@ -82,11 +85,17 @@ module.exports = function useNodeJs(options = {}) {
       }
     },
     configResolved(config) {
-      modules = initModules(config, options);
+      const resolved = resolveModules(config, options);
+      builtins.push(...resolved.builtins);
+      dependencies.push(...resolved.dependencies);
+      ESM_deps.push(...resolved.ESM_deps);
+      CJS_modules.push(...builtins.concat(dependencies));
     },
     resolveId(source) {
+      // TODO: Identify ESM
+
       const id = source.replace('node:', '');
-      if (modules.includes(id)) return id;
+      if (CJS_modules.includes(id)) return id;
     },
     load(id) {
       /**
@@ -129,7 +138,7 @@ module.exports = function useNodeJs(options = {}) {
        * 需要注意的一点是，Node.js 模块作为项目的依赖，应该放到 `dependencies` 中；除非你知道如何使用 Vite 构建他们。  
        */
 
-      if (modules.includes(id)) {
+      if (CJS_modules.includes(id)) {
         const cache = moduleCache.get(id);
         if (cache) return cache;
 
@@ -154,49 +163,56 @@ ${exportMembers}
 };
 
 /**
- * @type {(config: import('vite').ResolvedConfig, options: import('.').Options) => string[]}
+ * @type {(config: import('vite').ResolvedConfig, options: import('.').Options) => { builtins: string[]; dependencies: string[]; ESM_deps: string[]; }}
  */
-function initModules(config, options) {
+function resolveModules(config, options) {
   const root = config.root;
   const cwd = process.cwd();
-  const builtins = builtinModules.filter(e => !e.startsWith('_')).map(e => [e, `node:${e}`]).flat();
+  const builtins = builtinModules.filter(e => !e.startsWith('_')); builtins.push(...builtins.map(m => [m, `node:${m}`]));
   // dependencies of package.json
-  const dependencies = [];
-  let modules = [];
-
-  const lookupFile = (filename, paths) => {
-    for (const p of paths) {
-      const _path = path.join(p, filename);
-      if (fs.existsSync(_path)) {
-        return _path;
-      }
-    }
-  };
+  let dependencies = [];
+  // dependencies(ESM) of package.json
+  const ESM_deps = [];
 
   // Resolve package.json dependencies
   const pkgId = lookupFile('package.json', [root, cwd])
   if (pkgId) {
     const pkg = require(pkgId);
-    const deps = Object
-      .keys(pkg.dependencies || {})
-      .filter(p => {
-        const _pkgId = lookupFile('package.json', [root, cwd].map(r => `${r}/node_modules/${p}`));
-        if (_pkgId) {
-          const _pkg = require(_pkgId);
-          // exclude ESM package
-          return _pkg.type !== 'module';
+    for (const package of Object.keys(pkg.dependencies || {})) {
+      const _pkgId = lookupFile(
+        'package.json',
+        [root, cwd].map(r => `${r}/node_modules/${package}`),
+      );
+      if (_pkgId) {
+        const _pkg = require(_pkgId);
+        if (_pkg.type === 'module') {
+          ESM_deps.push(package);
+          continue;
         }
-        return true;
-      });
-    // TODO: Nested package name
-    dependencies.push(...deps);
+      }
+
+      // TODO: Nested package name
+      dependencies.push(package);
+    }
   }
 
-  modules = builtins.concat(dependencies);
   if (options.resolve) {
-    const tmp = options.resolve(modules);
-    if (tmp) modules = tmp;
+    const tmp = options.resolve(dependencies);
+    if (tmp) dependencies = tmp;
   }
 
-  return modules;
+  return {
+    builtins,
+    dependencies,
+    ESM_deps,
+  };
+}
+
+function lookupFile(filename, paths) {
+  for (const p of paths) {
+    const filepath = path.join(p, filename);
+    if (fs.existsSync(filepath)) {
+      return filepath;
+    }
+  }
 }
