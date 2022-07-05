@@ -121,6 +121,22 @@ import { ipcRenderer } from 'electron'
 import { ipcRenderer } from 'vite-plugin-electron-renderer/plugins/use-node.js/electron-renderer.js'
 ```
 
+## 🚨 ESM packages
+
+**e.g.** `node-fetch` `execa` `got` ...others
+
+1. `npm i vite-plugin-esmodule -D`
+2. Configure in vite.config.ts
+
+```ts
+import esmodule from 'vite-plugin-esmodule'
+export default {
+  plugins: [
+    esmodule(['got', 'execa', 'node-fetch']),
+  ],
+}
+```
+
 [👉 See electron-renderer.js](https://github.com/electron-vite/vite-plugin-electron-renderer/blob/main/plugins/use-node.js/electron-renderer.js)
 
 ## How to work
