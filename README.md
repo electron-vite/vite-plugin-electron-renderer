@@ -70,16 +70,20 @@ By default, `vite-plugin-electron-renderer` treats packages in `dependencies`(CJ
 
 ```js
 import { readFile } from 'fs'
+import { ipcRenderer } from 'electron'
 ↓
 const { readFile } = require('fs')
+const { ipcRenderer } = require('electron')
 ```
 
 ###### Electron-Renderer(vite build)
 
 ```js
 import { readFile } from 'fs'
+import { ipcRenderer } from 'electron'
 ↓
 const { readFile } = require('fs')
+const { ipcRenderer } = require('electron')
 ```
 
 ###### Electron-Renderer(vite serve)
@@ -95,7 +99,7 @@ const { readFile } = require('fs')
                │                                                          │
                │ 2. Intercept in load-hook(vite-plugin-electron-renderer) │
                │ 3. Generate a virtual module(fs)                         │
-               │                                                          │
+               │    ↓                                                     │
                │    const _M_ = require('fs')                             │
                │    export const readFile = _M_.readFile                  │
                │                                                          │
@@ -110,18 +114,20 @@ const { readFile } = require('fs')
 
 [👉 See Vite loading Node.js package source code.](https://github.com/electron-vite/vite-plugin-electron-renderer/blob/2bb38a1dbd50b462d33cbc314bb5db71119b52cf/plugins/use-node.js/index.js#L91)
 
-## How to work
-
-Using Electron API in Electron-Renderer
-
 ```js
 import { ipcRenderer } from 'electron'
 ↓
-// Actually will redirect by `resolve.alias`
+// Actually redirect via `resolve.alias`
 import { ipcRenderer } from 'vite-plugin-electron-renderer/plugins/use-node.js/electron-renderer.js'
 ```
 
-#### Config presets
+[👉 See electron-renderer.js](https://github.com/electron-vite/vite-plugin-electron-renderer/blob/main/plugins/use-node.js/electron-renderer.js)
+
+## How to work
+
+The plugin is just the encapsulation of the built-in plugins of [electron-vite-boilerplate/packages/renderer/plugins](https://github.com/electron-vite/electron-vite-boilerplate/tree/main/packages/renderer/plugins)
+
+###### Config presets
 
 1. Fist, the plugin will configuration something.
   *If you do not configure the following options, the plugin will modify their default values*
