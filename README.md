@@ -49,7 +49,7 @@ export interface Options {
 }
 ```
 
-## `dependencies` vs `devDependencies`
+## 🚨 `dependencies` vs `devDependencies`
 
 **The easiest way**
 
