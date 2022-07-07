@@ -1,4 +1,12 @@
 
+## [2022-07-07] v0.5.2
+
+- 9dd8d4c feat: export `resolveModules()`
+- 609e582 feat: interface `ResolveModules`
+- dc6d6f6 docs: update
+- 201eb71 docs: 🚨 ESM packages
+- c8fe50b docs: `import { ipcRenderer } from 'electron'`
+
 ## [2022-07-01] v0.5.1
 
 - ec224db refactor: optimize code

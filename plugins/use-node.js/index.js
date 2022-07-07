@@ -5,7 +5,7 @@ const { builtinModules } = require('module');
 /**
  * @type {import('.').UseNodeJs}
  */
-module.exports = function useNodeJs(options = {}) {
+function useNodeJs(options = {}) {
   const builtins = [];
   const dependencies = [];
   const ESM_deps = [];
@@ -163,12 +163,12 @@ ${exportMembers}
 };
 
 /**
- * @type {(config: import('vite').ResolvedConfig, options: import('.').Options) => { builtins: string[]; dependencies: string[]; ESM_deps: string[]; }}
+ * @type {import('.').ResolveModules}
  */
 function resolveModules(config, options) {
   const root = config.root;
   const cwd = process.cwd();
-  const builtins = builtinModules.filter(e => !e.startsWith('_')); builtins.push(...builtins.map(m => [m, `node:${m}`]));
+  const builtins = builtinModules.filter(e => !e.startsWith('_')); builtins.push(...builtins.map(m => `node:${m}`));
   // dependencies of package.json
   let dependencies = [];
   // dependencies(ESM) of package.json
@@ -216,3 +216,7 @@ function lookupFile(filename, paths) {
     }
   }
 }
+
+useNodeJs.resolveModules = resolveModules;
+useNodeJs.default = useNodeJs;
+module.exports = useNodeJs;
