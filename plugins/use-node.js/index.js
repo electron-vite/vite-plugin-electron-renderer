@@ -218,5 +218,12 @@ function lookupFile(filename, paths) {
 }
 
 useNodeJs.resolveModules = resolveModules;
-useNodeJs.default = useNodeJs;
+// Function {
+//   default: <ref *1> [Function: useNodeJs] {
+//     resolveModules: [Function: resolveModules2],
+//     default: [Circular *1]
+//   },
+//   resolveModules: [Getter]
+// }
+// useNodeJs.default = useNodeJs;
 module.exports = useNodeJs;
