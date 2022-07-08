@@ -20,7 +20,7 @@ export interface UseNodeJs {
 }
 
 export interface ResolveModules {
-  (config: ResolvedConfig, options: Options): {
+  (config: ResolvedConfig, options?: Options): {
     /** Node.js builtin modules */
     builtins: string[];
     /** dependencies of package.json */

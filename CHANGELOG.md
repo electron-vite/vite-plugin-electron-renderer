@@ -1,4 +1,11 @@
 
+## [2022-07-07] v0.5.3
+
+- 69eb531 docs: v0.5.3
+- cc98ed9 feat: `ResolveModules['options']`  optional
+- db03a72 chore: remove `useNodeJs.default = useNodeJs`
+- c30dc1b fix(🐞): add `electron` to ` builtins
+
 ## [2022-07-07] v0.5.2
 
 - 9dd8d4c feat: export `resolveModules()`
