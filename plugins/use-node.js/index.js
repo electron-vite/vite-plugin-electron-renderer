@@ -168,7 +168,7 @@ ${exportMembers}
 function resolveModules(config, options) {
   const root = config.root;
   const cwd = process.cwd();
-  const builtins = builtinModules.filter(e => !e.startsWith('_')); builtins.push(...builtins.map(m => `node:${m}`));
+  const builtins = builtinModules.filter(e => !e.startsWith('_')); builtins.push('electron', ...builtins.map(m => `node:${m}`));
   // dependencies of package.json
   let dependencies = [];
   // dependencies(ESM) of package.json
