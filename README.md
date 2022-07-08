@@ -66,6 +66,7 @@ By default, `vite-plugin-electron-renderer` treats packages in `dependencies`(CJ
 
 **e.g.**
 
+<!--
 ###### Electron-Main
 
 ```js
@@ -75,6 +76,7 @@ import { ipcRenderer } from 'electron'
 const { readFile } = require('fs')
 const { ipcRenderer } = require('electron')
 ```
+-->
 
 ###### Electron-Renderer(vite build)
 
@@ -121,41 +123,31 @@ import { ipcRenderer } from 'electron'
 import { ipcRenderer } from 'vite-plugin-electron-renderer/plugins/use-node.js/electron-renderer.js'
 ```
 
-## 🚨 ESM packages
-
-**e.g.** `node-fetch` `execa` `got` ...others
-
-1. `npm i vite-plugin-esmodule -D`
-2. Configure in vite.config.ts
-
-```ts
-import esmodule from 'vite-plugin-esmodule'
-export default {
-  plugins: [
-    esmodule(['got', 'execa', 'node-fetch']),
-  ],
-}
-```
-
 [👉 See electron-renderer.js](https://github.com/electron-vite/vite-plugin-electron-renderer/blob/main/plugins/use-node.js/electron-renderer.js)
+
+## 🚨 Node.js ESM packages
+
+**e.g.** `node-fetch` `execa` `got` ...
+
+In general, converting Node.js ESM packages is only required when using the Node.js API in Electron-Renderer, not in Electron-Main.
+
+*通常的，只有在 Electron-Renderer 中使用 Node.js API 的情况下才需要转换 Node.js ESM 模块，而在 Electron-Main 中使用不必转换*
+
+1. Use [vite-plugin-esmodule](https://github.com/vite-plugin/vite-plugin-esmodule) to load ESM modules
+2. It is recommended to put the ESM packages in the `devDependencies`
 
 ## How to work
 
 The plugin is just the encapsulation of the built-in plugins of [electron-vite-boilerplate/packages/renderer/plugins](https://github.com/electron-vite/electron-vite-boilerplate/tree/main/packages/renderer/plugins)
 
-###### Config presets
+## Config presets
 
-1. Fist, the plugin will configuration something.
-  *If you do not configure the following options, the plugin will modify their default values*
+If you do not configure the following options, the plugin will modify their default values
 
-  * `base = './'`
-  * `build.assetsDir = ''` -> *TODO: Automatic splicing `build.assetsDir`*
-  * ~~`build.emptyOutDir = false`~~
-  * `build.cssCodeSplit = false`
-  * `build.rollupOptions.output.format = 'cjs'`
-  * `resolve.conditions = ['node']`
-  * Always insert the `electron` module into `optimizeDeps.exclude`
-
-2. The plugin transform Electron and Node.js built-in modules to ESModule format in `vite serve` phase.
-
-3. Add Electron and Node.js built-in modules to Rollup `output.external` option in the `vite build` phase.
+- `base = './'`
+- `build.assetsDir = ''` -> *TODO: Support nested dir*
+- `build.emptyOutDir = false`
+- `build.cssCodeSplit = false`
+- `build.rollupOptions.output.format = 'cjs'`
+- `resolve.conditions = ['node']`
+- Always insert the `electron` module into `optimizeDeps.exclude`
