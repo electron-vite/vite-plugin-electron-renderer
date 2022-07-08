@@ -165,7 +165,7 @@ ${exportMembers}
 /**
  * @type {import('.').ResolveModules}
  */
-function resolveModules(config, options) {
+function resolveModules(config, options = {}) {
   const root = config.root;
   const cwd = process.cwd();
   const builtins = builtinModules.filter(e => !e.startsWith('_')); builtins.push('electron', ...builtins.map(m => `node:${m}`));
