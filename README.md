@@ -71,10 +71,8 @@ By default, `vite-plugin-electron-renderer` treats packages in `dependencies`(CJ
 
 ```js
 import { readFile } from 'fs'
-import { ipcRenderer } from 'electron'
 ↓
 const { readFile } = require('fs')
-const { ipcRenderer } = require('electron')
 ```
 -->
 
@@ -82,10 +80,8 @@ const { ipcRenderer } = require('electron')
 
 ```js
 import { readFile } from 'fs'
-import { ipcRenderer } from 'electron'
 ↓
 const { readFile } = require('fs')
-const { ipcRenderer } = require('electron')
 ```
 
 ###### Electron-Renderer(vite serve)
@@ -114,26 +110,15 @@ const { ipcRenderer } = require('electron')
 ┗———————————————————————————————┛                                ┗—————————————————┛
 ```
 
-[👉 See Vite loading Node.js package source code.](https://github.com/electron-vite/vite-plugin-electron-renderer/blob/2bb38a1dbd50b462d33cbc314bb5db71119b52cf/plugins/use-node.js/index.js#L91)
-
-```js
-import { ipcRenderer } from 'electron'
-↓
-// Actually redirect via `resolve.alias`
-import { ipcRenderer } from 'vite-plugin-electron-renderer/plugins/use-node.js/electron-renderer.js'
-```
-
-[👉 See electron-renderer.js](https://github.com/electron-vite/vite-plugin-electron-renderer/blob/main/plugins/use-node.js/electron-renderer.js)
-
 ## 🚨 Node.js ESM packages
 
 **e.g.** `node-fetch` `execa` `got` ...
 
-In general, converting Node.js ESM packages is only required when using the Node.js API in Electron-Renderer, not in Electron-Main.
+In general, Node.js ESM packages only need to be converted if they are used in Electron-Renderer, but not in Electron-Main.
 
-*通常的，只有在 Electron-Renderer 中使用 Node.js API 的情况下才需要转换 Node.js ESM 模块，而在 Electron-Main 中使用不必转换*
+*通常的，只有在 Electron-Renderer 中使用的情况下才需要转换 Node.js ESM 模块，而在 Electron-Main 中使用则不必转换。*
 
-1. Use [vite-plugin-esmodule](https://github.com/vite-plugin/vite-plugin-esmodule) to load ESM modules
+1. Use [vite-plugin-esmodule](https://github.com/vite-plugin/vite-plugin-esmodule) to load ESM packages
 2. It is recommended to put the ESM packages in the `devDependencies`
 
 ## How to work
@@ -150,4 +135,4 @@ If you do not configure the following options, the plugin will modify their defa
 - `build.cssCodeSplit = false`
 - `build.rollupOptions.output.format = 'cjs'`
 - `resolve.conditions = ['node']`
-- Always insert the `electron` module into `optimizeDeps.exclude`
+- `optimizeDeps.exclude = ['electron']` - always
