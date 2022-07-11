@@ -60,7 +60,7 @@ export {
       env = _env;
 
       // https://github.com/vitejs/vite/blob/53799e1cced7957f9877a5b5c9b6351b48e216a7/packages/vite/src/node/config.ts#L439-L442
-      const root = normalizePath(config.root ? path.resolve(config.root) : cwd);
+      const root = normalizePath(config.root ? path.resolve(config.root) : process.cwd());
       const resolved = resolveModules(root, options);
 
       builtins.push(...resolved.builtins);
