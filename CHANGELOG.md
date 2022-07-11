@@ -1,4 +1,8 @@
 
+## [2022-07-11] v0.5.7
+
+- 71799c7 fix(🐞): `cwd is not defined`
+
 ## [2022-07-11] v0.5.6
 
 - d31f917 refactor: `root: string` instead of `config: UserConfig`
