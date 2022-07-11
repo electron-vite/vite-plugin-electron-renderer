@@ -1,4 +1,10 @@
 
+## [2022-07-11] v0.5.5
+
+- 7f5117b chore: types
+- 17eab4d fix(🐞): build Electron-Renderer
+- f5ea26c remove `plugins/use-node.js/electron-renderer.js`
+
 ## [2022-07-10] v0.5.4
 
 - 75b60c2 docs: v0.5.4
