@@ -59,7 +59,10 @@ export {
     config(config, _env) {
       env = _env;
 
-      const resolved = resolveModules(config, options);
+      // https://github.com/vitejs/vite/blob/53799e1cced7957f9877a5b5c9b6351b48e216a7/packages/vite/src/node/config.ts#L439-L442
+      const root = normalizePath(config.root ? path.resolve(config.root) : cwd);
+      const resolved = resolveModules(root, options);
+
       builtins.push(...resolved.builtins);
       dependencies.push(...resolved.dependencies);
       ESM_deps.push(...resolved.ESM_deps);
@@ -186,10 +189,8 @@ export {
 /**
  * @type {import('.').ResolveModules}
  */
-function resolveModules(config, options = {}) {
+function resolveModules(root, options = {}) {
   const cwd = process.cwd();
-  // https://github.com/vitejs/vite/blob/53799e1cced7957f9877a5b5c9b6351b48e216a7/packages/vite/src/node/config.ts#L439-L442
-  const root = normalizePath(config.root ? path.resolve(config.root) : cwd)
   const builtins = builtinModules.filter(e => !e.startsWith('_')); builtins.push('electron', ...builtins.map(m => `node:${m}`));
   // dependencies of package.json
   let dependencies = [];
