@@ -1,4 +1,8 @@
 
+## [2022-07-11] v0.5.6
+
+- d31f917 refactor: `root: string` instead of `config: UserConfig`
+
 ## [2022-07-11] v0.5.5
 
 - 7f5117b chore: types
