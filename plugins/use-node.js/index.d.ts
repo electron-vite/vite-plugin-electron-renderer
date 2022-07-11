@@ -1,4 +1,4 @@
-import { Plugin, ResolvedConfig } from 'vite';
+import { Plugin, UserConfig } from 'vite';
 
 declare const useNodeJs: UseNodeJs;
 declare const resolveModules: ResolveModules;
@@ -20,7 +20,7 @@ export interface UseNodeJs {
 }
 
 export interface ResolveModules {
-  (config: ResolvedConfig, options?: Options): {
+  (config: UserConfig, options?: Options): {
     /** Node.js builtin modules */
     builtins: string[];
     /** dependencies of package.json */
