@@ -230,6 +230,9 @@ function resolveModules(config, options = {}) {
   };
 }
 
+/**
+ * @type {(filename: string, paths: string[]) => string | undefined}
+ */
 function lookupFile(filename, paths) {
   for (const p of paths) {
     const filepath = path.join(p, filename);
