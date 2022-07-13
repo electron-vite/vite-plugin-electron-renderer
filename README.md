@@ -49,7 +49,7 @@ export interface Options {
 }
 ```
 
-## 🚨 `dependencies` vs `devDependencies`
+## `dependencies` vs `devDependencies`
 
 **🚨 The easiest way**
 
@@ -122,7 +122,7 @@ renderer({
 })
 ```
 
-## 🚨 Node.js ESM packages
+## Node.js ESM packages
 
 **e.g.** `node-fetch` `execa` `got` ...
 
