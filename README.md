@@ -1,3 +1,8 @@
+
+> Migrated 👉 [vite-plugin-electron/packages/electron-renderer](https://github.com/electron-vite/vite-plugin-electron/tree/main/packages/electron-renderer)
+
+---
+
 # vite-plugin-electron-renderer
 
 Support use Node.js API in Electron-Renderer
