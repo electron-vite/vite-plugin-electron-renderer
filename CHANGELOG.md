@@ -1,3 +1,38 @@
+[v0.9.0~v0.10.2 | CHANGELOG](https://github.com/electron-vite/vite-plugin-electron/blob/v0.10.2/CHANGELOG.md)
+
+## [2022-08-11] v0.8.8
+
+sync `vite-plugin-electron` version
+
+## [2022-08-08] v0.8.5
+
+- 1cc4f40 fix(🌱): support Vite3 - [Uncaught TypeError: Failed to construct 'URL': Invalid URL (vite 3) #44](https://github.com/electron-vite/vite-plugin-electron/issues/44)
+- 32f7755 feat(🌱): output ESM format - [TypeError: electron is not a function #45](https://github.com/electron-vite/vite-plugin-electron/issues/45)
+
+## [2022-07-21] v0.8.1
+
+- 33b121a chore(deps): hoist `typescript`
+- 9d5fd94 fix(🐞): filter out keywords
+- d3c1d7a chore(renderer): update config
+- 298e4de refactor(renderer): `electron-renderer/plugins` -> `electron-renderer/src`
+- 841cbd1 docs(electron-renderer): update
+- 3994b9a chore(electron-renderer): fix link
+- 72efa81 docs(electron-renderer): update
+
+## [2022-07-19] v0.6.0
+
+- be80d0c vite-plugin-electron-renderer@0.6.0
+- 7e69a7c docs: `vite-plugin-electron-renderer@0.6.0`
+- da89e79 remove `electron-renderer/index.d.ts`
+- 581ef71 chore(deps): bump vite to 3.0.2
+- 716485b refactor vite-plugin-electron-renderer with TypeScript
+- baf5e80 refactor use-node.js with TypeScript
+- 7e3fd3d refactor polyfill-exports with TypeScript
+- 2249834 refactor build-config with TypeScript
+- 8dad5e2 refactor(🚨): exclude `dependencies` as external by default
+- 0163d12 feat: `scripts.dev`
+- 3ad4b41 feat: `scripts.build` `scripts.dev`
+- 48a0338 monorepo: add `packages/electron-renderer`
 
 ## [2022-07-11] v0.5.7
 
