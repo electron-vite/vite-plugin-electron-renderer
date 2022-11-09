@@ -114,12 +114,11 @@ export default function useNodeJs(options: UseNodeJsOptions = {}): Plugin[] {
       ESM_deps.push(...resolved.ESM_deps)
 
       if (env.command === 'serve') {
-        if (!config.resolve) config.resolve = {}
-        if (!config.resolve.conditions) config.resolve.conditions = ['node']
+        config.resolve ??= {}
+        config.resolve.conditions ??= ['node']
 
-        if (!config.optimizeDeps) config.optimizeDeps = {}
-        if (!config.optimizeDeps.exclude) config.optimizeDeps.exclude = []
-
+        config.optimizeDeps ??= {}
+        config.optimizeDeps.exclude ??= []
         // `electron` should not be Pre-Building
         config.optimizeDeps.exclude.push('electron')
 
