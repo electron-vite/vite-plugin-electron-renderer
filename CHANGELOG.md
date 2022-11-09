@@ -1,3 +1,9 @@
+## 0.10.3 (2022-11-09)
+
+- `optimizerDeps` generate sourcemap by default vite-plugin-electron#70
+
+---
+
 [v0.9.0~v0.10.2 | CHANGELOG](https://github.com/electron-vite/vite-plugin-electron/blob/v0.10.2/CHANGELOG.md)
 
 ## [2022-08-11] v0.8.8
