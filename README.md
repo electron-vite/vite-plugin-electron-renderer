@@ -1,8 +1,3 @@
-
-> Migrated 👉 [vite-plugin-electron/packages/electron-renderer](https://github.com/electron-vite/vite-plugin-electron/tree/main/packages/electron-renderer)
-
----
-
 # vite-plugin-electron-renderer
 
 Support use Node.js API in Electron-Renderer
@@ -209,8 +204,6 @@ Doing so will reduce the size of the packaged APP by [electron-builder](https://
 
 If you do not configure the following options, the plugin will modify their default values
 
-- `base = './'`
-- `build.emptyOutDir = false`
 - `build.cssCodeSplit = false` (*TODO*)
 - `build.rollupOptions.output.format = 'cjs'` (nodeIntegration: true)
 - `resolve.conditions = ['node']`
