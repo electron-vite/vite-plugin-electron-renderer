@@ -1,3 +1,9 @@
+## 0.10.4 (2022-11-14)
+
+`optimizerDeps` should not process builtins, builtins will be processed in `use-node.js.ts`.
+
+- 6436b49 fix: avoid built-in modules
+
 ## 0.10.3 (2022-11-09)
 
 - `optimizerDeps` generate sourcemap by default vite-plugin-electron#70

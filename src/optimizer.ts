@@ -19,9 +19,14 @@ export type DepOptimizationConfig = {
 }
 
 const cjs_require = createRequire(import.meta.url)
+const builtins = [
+  ...builtinModules,
+  ...builtinModules.map(mod => `node:${mod}`),
+]
+const CACHE_DIR = '.vite-electron-renderer'
+
 let root: string
 let node_modules_path: string
-const CACHE_DIR = '.vite-electron-renderer'
 
 export default function optimizer(options: DepOptimizationConfig): Plugin {
   return {
@@ -59,6 +64,10 @@ export default function optimizer(options: DepOptimizationConfig): Plugin {
         }
         if (type === 'commonjs') {
           deps.push({ cjs: name })
+          continue
+        }
+        if (builtins.includes(name)) {
+          // Process in './use-node.js.ts'
           continue
         }
         const pkg = cjs_require(path.join(node_modules_path, name, 'package.json'))
