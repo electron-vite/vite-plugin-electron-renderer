@@ -1,3 +1,7 @@
+## 0.11.1 (2022-11-16)
+
+- a8c546b fix: add 'vite-plugin-electron-renderer/electron-renderer' to `optimizeDeps.exclude`
+
 ## 0.11.0 (2022-11-15)
 
 #### Break!
