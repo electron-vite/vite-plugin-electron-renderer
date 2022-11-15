@@ -27,7 +27,7 @@
     "got": "^12.1.0",
     "node-fetch": "^3.2.8",
     "vite": "^3.2.3",
-    "vite-plugin-electron": "^0.10.2",
+    "vite-plugin-electron": "^0.10.4",
     "vite-plugin-electron-renderer": "workspace:*"
   }
 }
