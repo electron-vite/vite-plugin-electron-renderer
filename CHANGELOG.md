@@ -1,3 +1,17 @@
+## 0.11.0 (2022-11-15)
+
+#### Break!
+
+1. All Node.js APIs must be Pre-Bundling via `optimizeDeps` *(the 'electron' module does not need to be built)*, this brings the benefit of being able to use it in Web Worker at the same time.
+2. Remove `worker()` plugin.
+3. Use Vite to build all source code, and will no longer support importing a plugin separately.
+
+- c9b42be refactor: build with Vite
+- d31f314 electron-renderer.js
+- 2904e03 feat: `nodeIntegration` in build-config.ts
+- 4d292fb feat: `optimizeDeps` support Node.js built-in modules
+- 522955c refactor!: remove `worker()`, remove Node.js API support.
+
 ## 0.10.4 (2022-11-14)
 
 `optimizerDeps` should not process builtins, builtins will be processed in `use-node.js.ts`.
