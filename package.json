@@ -37,7 +37,8 @@
   "files": [
     "types",
     "index.mjs",
-    "index.js"
+    "index.js",
+    "electron-renderer.js"
   ],
   "keywords": [
     "vite",
