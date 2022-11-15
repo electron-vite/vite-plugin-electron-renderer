@@ -1,10 +1,7 @@
-import type { PluginOption, Plugin } from 'vite'
+import type { PluginOption } from 'vite'
 import buildConfig from './build-config'
 import cjsShim from './cjs-shim'
-import {
-  type DepOptimizationConfig,
-  default as optimizer,
-} from './optimizer'
+import optimizer, { type DepOptimizationConfig } from './optimizer'
 
 export default function renderer(
   options: {
@@ -13,7 +10,7 @@ export default function renderer(
      */
     nodeIntegration?: boolean
     /**
-     * If the npm-package you are using is a Node.js package, then you need to Pre Bundling it.
+     * If the npm-package you are using is a Node.js package, then you need to Pre-Bundling it.
      * @see https://vitejs.dev/guide/dep-pre-bundling.html
      */
     optimizeDeps?: DepOptimizationConfig
