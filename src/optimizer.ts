@@ -11,6 +11,8 @@ export type DepOptimizationConfig = {
     name: string
     /**
      * Explicitly specify the module type
+     * - `commonjs` - Only the ESM code snippet is wrapped
+     * - `module` - First build the code as cjs via esbuild, then wrap the ESM code snippet
      */
     type?: "commonjs" | "module"
   })[]
