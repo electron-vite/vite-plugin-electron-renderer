@@ -1,6 +1,14 @@
+import { builtinModules } from 'node:module'
 import type { Plugin } from 'vite'
+import type { ExternalOption, RollupOptions } from 'rollup'
 
-export default function buildConfig(): Plugin {
+export const builtins = [
+  'electron',
+  ...builtinModules,
+  ...builtinModules.map(mod => `node:${mod}`),
+]
+
+export default function buildConfig(nodeIntegration?: boolean): Plugin {
   return {
     name: 'vite-plugin-electron-renderer:build-config',
     apply: 'build',
@@ -15,6 +23,46 @@ export default function buildConfig(): Plugin {
 
       // https://github.com/electron-vite/electron-vite-vue/issues/107
       config.build.cssCodeSplit ??= false
+
+      if (nodeIntegration) {
+        config.build.rollupOptions ??= {}
+        config.build.rollupOptions.external = withExternal(config.build.rollupOptions.external)
+        setOutputFormat(config.build.rollupOptions)
+      }
     },
+  }
+}
+
+function withExternal(external?: ExternalOption) {
+  if (
+    Array.isArray(external) ||
+    typeof external === 'string' ||
+    external instanceof RegExp
+  ) {
+    // @ts-ignore
+    external = builtins.concat(external)
+  } else if (typeof external === 'function') {
+    const original = external
+    external = function externalFn(source, importer, isResolved) {
+      if (builtins.includes(source)) {
+        return true
+      }
+      return original(source, importer, isResolved)
+    }
+  } else {
+    external = builtins
+  }
+  return external
+}
+
+// At present, Electron can only support CommonJs
+function setOutputFormat(rollupOptions: RollupOptions) {
+  rollupOptions.output ??= {}
+  if (Array.isArray(rollupOptions.output)) {
+    for (const o of rollupOptions.output) {
+      if (o.format === undefined) o.format = 'cjs'
+    }
+  } else {
+    if (rollupOptions.output.format === undefined) rollupOptions.output.format = 'cjs'
   }
 }

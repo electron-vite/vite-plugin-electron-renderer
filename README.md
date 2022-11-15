@@ -49,11 +49,11 @@ API *(Define)*
 ```ts
 export interface RendererOptions {
   /**
-   * Whether node integration is enabled. Default is `false`.
+   * @default false
    */
   nodeIntegration?: boolean
   /**
-   * If the npm-package you are using is a Node.js package, then you need to Pre Bundling it.
+   * If the npm-package you are using is a Node.js package, then you need to Pre-Bundling it.
    * @see https://vitejs.dev/guide/dep-pre-bundling.html
    */
   optimizeDeps?: {
@@ -61,6 +61,8 @@ export interface RendererOptions {
       name: string
       /**
        * Explicitly specify the module type
+       * - `commonjs` - Only the ESM code snippet is wrapped
+       * - `module` - First build the code as cjs via esbuild, then wrap the ESM code snippet
        */
       type?: "commonjs" | "module"
     })[]
@@ -69,72 +71,45 @@ export interface RendererOptions {
 }
 ```
 
-## Worker
-
-vite.config.ts
-
-```js
-import { worker } from 'vite-plugin-electron-renderer'
-
-export default {
-  worker: {
-    plugins: [
-      worker(/* options */),
-    ],
-  },
-}
-```
-
-API *(Define)*
-
-`renderer(options: WorkerOptions)`
-
-```ts
-export interface WorkerOptions {
-  /**
-   * Whether node integration is enabled in web workers. Default is `false`. More
-   * about this can be found in Multithreading.
-   */
-  nodeIntegrationInWorker?: boolean
-}
-```
-
 ## How to work
-
-> Load Electron and Node.js cjs-packages/builtin-modules (Schematic)
 
 ###### Electron-Renderer(vite serve)
 
+> Load Electron and Node.js cjs-packages/builtin-modules (Schematic)
+
 ```
-┏————————————————————————————————————————┓                    ┏—————————————————┓
-│ import { ipcRenderer } from 'electron' │                    │ Vite dev server │
-┗————————————————————————————————————————┛                    ┗—————————————————┛
-                   │                                                   │
-                   │ 1. HTTP(Request): electron module                 │
-                   │ ————————————————————————————————————————————————> │
-                   │                                                   │
-                   │                                                   │
-                   │ 2. Intercept in load-hook(Plugin)                 │
-                   │ 3. Generate a virtual ESM module(electron)        │
-                   │    ↓                                              │
-                   │    const { ipcRenderer } = require('electron')    │
-                   │    export { ipcRenderer }                         │
-                   │                                                   │
-                   │                                                   │
-                   │ 4. HTTP(Response): electron module                │
-                   │ <———————————————————————————————————————————————— │
-                   │                                                   │
-┏————————————————————————————————————————┓                    ┏—————————————————┓
-│ import { ipcRenderer } from 'electron' │                    │ Vite dev server │
-┗————————————————————————————————————————┛                    ┗—————————————————┛
+┏———————————————————————————————┓                        ┏—————————————————┓
+│ import { readFile } from 'fs' │                        │ Vite dev server │
+┗———————————————————————————————┛                        ┗—————————————————┛
+                │ 1. Pre-Bundling fs module into                  │
+                │    node_modules/.vite-electron-renderer/fs      │
+                │                                                 │
+                │ 2. HTTP(Request): fs module                     │
+                │ ——————————————————————————————————————————————> │
+                │                                                 │
+                │ 3. Alias redirects to                           │
+                │    node_modules/.vite-electron-renderer/fs      │
+                │    ↓                                            │
+                │    const { readFile } = require('fs')           │
+                │    export { readFile }                          │
+                │                                                 │
+                │ 4. HTTP(Response): fs module                    │
+                │ <—————————————————————————————————————————————— │
+                │                                                 │
+┏———————————————————————————————┓                        ┏—————————————————┓
+│ import { readFile } from 'fs' │                        │ Vite dev server │
+┗———————————————————————————————┛                        ┗—————————————————┛
 ```
 
 ###### Electron-Renderer(vite build)
 
+1. Add "fs module" to `rollupOptions.external`.
+2. Modify `rollupOptions.output.format` to `cjs` *(If it you didn't explicitly set it)*.
+
 ```js
-import { ipcRenderer } from 'electron'
+import { readFile } from 'fs'
 ↓
-const { ipcRenderer } = require('electron')
+const { readFile } = require('fs')
 ```
 
 ## Dependency Pre-Bundling

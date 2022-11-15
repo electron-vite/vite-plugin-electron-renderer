@@ -1,6 +1,6 @@
 import { defineConfig } from 'vite'
 import electron from 'vite-plugin-electron'
-import renderer, { worker } from 'vite-plugin-electron-renderer'
+import renderer from 'vite-plugin-electron-renderer'
 
 export default defineConfig({
   build: {
@@ -16,13 +16,12 @@ export default defineConfig({
     }),
     renderer({
       nodeIntegration: true,
+      optimizeDeps: {
+        include: [
+          'fs',
+          'path',
+        ]
+      },
     }),
   ],
-  worker: {
-    plugins: [
-      worker({
-        nodeIntegrationInWorker: true,
-      }),
-    ],
-  },
 })
