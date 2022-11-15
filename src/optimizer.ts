@@ -43,7 +43,7 @@ export default function optimizer(options: DepOptimizationConfig): Plugin[] | un
           find: 'electron',
           replacement: 'vite-plugin-electron-renderer/electron-renderer',
         }]
-        const optimizeDepsExclude = []
+        const optimizeDepsExclude = ['electron']
 
         for (const item of include) {
           const name = typeof item === 'string' ? item : item.name
