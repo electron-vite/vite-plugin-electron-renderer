@@ -6,7 +6,7 @@ import optimizer, { type DepOptimizationConfig } from './optimizer'
 export default function renderer(
   options: {
     /**
-     * Whether node integration is enabled. Default is `false`.
+     * @default false
      */
     nodeIntegration?: boolean
     /**
@@ -17,7 +17,7 @@ export default function renderer(
   } = {}
 ): PluginOption {
   return [
-    buildConfig(),
+    buildConfig(options.nodeIntegration),
     options.nodeIntegration && cjsShim(),
     options.optimizeDeps && optimizer(options.optimizeDeps),
   ]
