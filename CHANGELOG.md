@@ -1,6 +1,15 @@
+## 0.11.2 (2022-11-18)
+
+1. Pre-Bundling Node.js built-in modules by default.
+2. Fixed incorrect loading of static resources *(It does not support custom assetsDir)*.
+
+- ee51908 feat: build built-in modules 🌱
+- 51d5287 fix: `assetsDir` default value
+- 5d0dfc0 refactor: always Pre-Bundling built-in modules
+
 ## 0.11.1 (2022-11-16)
 
-- a8c546b fix: add 'vite-plugin-electron-renderer/electron-renderer' to `optimizeDeps.exclude`
+- a8c546b fix: add 'vite-plugin-electron-renderer/electron-renderer' to `optimizeDeps.exclude`.
 
 ## 0.11.0 (2022-11-15)
 
