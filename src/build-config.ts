@@ -4,8 +4,8 @@ import type { ExternalOption, RollupOptions } from 'rollup'
 
 export const builtins = [
   'electron',
-  ...builtinModules,
-  ...builtinModules.map(mod => `node:${mod}`),
+  ...builtinModules.filter(m => !m.startsWith('_')),
+  ...builtinModules.filter(m => !m.startsWith('_')).map(mod => `node:${mod}`),
 ]
 
 export default function buildConfig(nodeIntegration?: boolean): Plugin {
@@ -13,7 +13,7 @@ export default function buildConfig(nodeIntegration?: boolean): Plugin {
     name: 'vite-plugin-electron-renderer:build-config',
     apply: 'build',
     config(config) {
-      // make sure that Electron can be loaded into the local file using `loadFile` after packaging
+      // Make sure that Electron can be loaded into the local file using `loadFile` after packaging
       config.base ??= './'
 
       config.build ??= {}
@@ -23,6 +23,11 @@ export default function buildConfig(nodeIntegration?: boolean): Plugin {
 
       // https://github.com/electron-vite/electron-vite-vue/issues/107
       config.build.cssCodeSplit ??= false
+
+      // TODO: compatible with custom assetsDir
+      // This will guarantee the proper loading of static resources, such as images
+      // The `.js` file can be loaded correctly with cjs-shim.ts
+      // config.build.assetsDir ??= ''
 
       if (nodeIntegration) {
         config.build.rollupOptions ??= {}
