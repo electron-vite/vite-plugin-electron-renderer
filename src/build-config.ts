@@ -25,9 +25,9 @@ export default function buildConfig(nodeIntegration?: boolean): Plugin {
       config.build.cssCodeSplit ??= false
 
       // TODO: compatible with custom assetsDir
-      // This will guarantee the proper loading of static resources, such as images
+      // This will guarantee the proper loading of static resources, such as images, `worker.js`
       // The `.js` file can be loaded correctly with cjs-shim.ts
-      // config.build.assetsDir ??= ''
+      config.build.assetsDir ??= ''
 
       if (nodeIntegration) {
         config.build.rollupOptions ??= {}
