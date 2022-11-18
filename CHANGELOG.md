@@ -1,3 +1,7 @@
+## 0.11.3 (2022-11-18)
+
+- cbab7db fix: insert built-in modules to `optimizeDeps.exclude`
+
 ## 0.11.2 (2022-11-18)
 
 1. Pre-Bundling Node.js built-in modules by default.
