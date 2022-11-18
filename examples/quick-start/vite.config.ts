@@ -14,7 +14,6 @@ export default defineConfig({
       // Like Vite's pre bundling
       optimizeDeps: {
         include: [
-          'fs',             // built-in
           'serialport',     // cjs(C++)
           'electron-store', // cjs
           'execa',          // esm

@@ -16,12 +16,6 @@ export default defineConfig({
     }),
     renderer({
       nodeIntegration: true,
-      optimizeDeps: {
-        include: [
-          'fs',
-          'path',
-        ]
-      },
     }),
   ],
 })
