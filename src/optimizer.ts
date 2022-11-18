@@ -56,7 +56,7 @@ export default function optimizer(options: DepOptimizationConfig = {}): Plugin[]
         ]
 
         modifyAlias(config, aliases)
-        modifyOptimizeDeps(config, aliases.map(({ replacement }) => replacement))
+        modifyOptimizeDeps(config, builtins.concat(aliases.map(({ replacement }) => replacement)))
       },
     },
     {
