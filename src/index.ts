@@ -18,7 +18,7 @@ export default function renderer(
 ): PluginOption {
   return [
     buildConfig(options.nodeIntegration),
+    optimizer(options.optimizeDeps),
     options.nodeIntegration && cjsShim(),
-    options.optimizeDeps && optimizer(options.optimizeDeps),
   ]
 }

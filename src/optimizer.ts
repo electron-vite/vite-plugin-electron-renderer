@@ -28,9 +28,8 @@ const name = 'vite-plugin-electron-renderer:optimizer'
 let root: string
 let node_modules_path: string
 
-export default function optimizer(options: DepOptimizationConfig): Plugin[] | undefined {
+export default function optimizer(options: DepOptimizationConfig = {}): Plugin[] | undefined {
   const { include, buildOptions } = options
-  if (!include?.length) return
 
   return [
     {
@@ -39,36 +38,25 @@ export default function optimizer(options: DepOptimizationConfig): Plugin[] | un
       config(config) {
         root = config.root ? path.resolve(config.root) : process.cwd()
         node_modules_path = node_modules(root)
+
         fs.rmSync(path.join(node_modules_path, CACHE_DIR), { recursive: true, force: true })
 
-        const aliases: Alias[] = [{
-          find: 'electron',
-          replacement: 'vite-plugin-electron-renderer/electron-renderer',
-        }]
-        const optimizeDepsExclude = [
-          'electron',
-          'vite-plugin-electron-renderer/electron-renderer',
+        const aliases: Alias[] = [
+          {
+            find: 'electron',
+            replacement: 'vite-plugin-electron-renderer/electron-renderer',
+          },
+          ...builtins
+            .filter(m => m !== 'electron')
+            .filter(m => !m.startsWith('node:'))
+            .map<Alias>(m => ({
+              find: new RegExp(`^(node:)?${m}$`),
+              replacement: `vite-plugin-electron-renderer/builtins/${m}`,
+            })),
         ]
 
-        for (const item of include) {
-          const name = typeof item === 'string' ? item : item.name
-          if (!builtins.includes(name) || name === 'electron') {
-            continue
-          }
-
-          cjsBundling({
-            name,
-            require: name,
-            requireId: name,
-          })
-
-          optimizeDepsExclude.push(name)
-          const { destname } = dest(name)
-          aliases.push({ find: name, replacement: destname })
-        }
-
         modifyAlias(config, aliases)
-        modifyOptimizeDeps(config, optimizeDepsExclude)
+        modifyOptimizeDeps(config, aliases.map(({ replacement }) => replacement))
       },
     },
     {
@@ -77,6 +65,8 @@ export default function optimizer(options: DepOptimizationConfig): Plugin[] | un
       // TODO: consider support `vite build` phase, like Vite v3.0.0
       apply: 'serve',
       async config(config) {
+        if (!include?.length) return
+
         const deps: {
           esm?: string
           cjs?: string

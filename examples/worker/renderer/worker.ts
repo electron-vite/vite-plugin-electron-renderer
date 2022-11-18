@@ -1,7 +1,5 @@
 import { join } from 'path'
-import path from 'path'
-import fs from 'fs'
+import fs from 'node:fs/promises'
 
-console.log(join('a', 'b'))
-console.log(path.join('c', 'd'))
-console.log(fs)
+console.log("join('a', 'b') ->", join('a', 'b'))
+console.log('node:fs/promises ->', fs)
