@@ -20,7 +20,7 @@
   "scripts": {
     "dev": "vite build --watch",
     "build": "tsc --emitDeclarationOnly && vite build",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "pnpm run build"
   },
   "peerDependencies": {
     "esbuild": "*"
@@ -29,10 +29,10 @@
     "lib-esm": "~0.3.0"
   },
   "devDependencies": {
-    "esbuild": "^0.15.13",
-    "rollup": "^2.79.1",
-    "typescript": "^4.8.4",
-    "vite": "^3.2.3"
+    "esbuild": "^0.16.11",
+    "rollup": "^3.8.1",
+    "typescript": "^4.9.4",
+    "vite": "^4.0.3"
   },
   "files": [
     "types",
