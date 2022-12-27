@@ -1,6 +1,6 @@
 process.env['ELECTRON_DISABLE_SECURITY_WARNINGS'] = 'true'
 
-import path from 'path'
+import path from 'node:path'
 import { app, BrowserWindow } from 'electron'
 
 let win: BrowserWindow | null = null

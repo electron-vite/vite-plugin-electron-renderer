@@ -1,4 +1,4 @@
-import { join } from 'path'
+import { join } from 'node:path'
 import fs from 'node:fs/promises'
 
 console.log("join('a', 'b') ->", join('a', 'b'))

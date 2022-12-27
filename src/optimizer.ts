@@ -260,7 +260,7 @@ function node_modules(root: string, count = 0): string {
     return node_modules.p = p
   }
   if (count >= 19) {
-    throw new Error('Can not found node_modules directory.')
+    throw new Error('Can\'t find node_modules directory.')
   }
   return node_modules(path.join(root, '..'), count + 1)
 }

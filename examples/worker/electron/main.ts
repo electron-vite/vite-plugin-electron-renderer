@@ -1,8 +1,8 @@
 process.env['ELECTRON_DISABLE_SECURITY_WARNINGS'] = 'true'
 
 import { app, BrowserWindow } from 'electron'
-import path from 'path'
-import { Worker } from 'worker_threads'
+import path from 'node:path'
+import { Worker } from 'node:worker_threads'
 
 let win: BrowserWindow
 
