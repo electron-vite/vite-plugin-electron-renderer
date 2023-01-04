@@ -97,10 +97,10 @@ export default function optimizer(options: DepOptimizationConfig = {}): Plugin[]
             continue
           }
 
-          const pkgId = path.join(node_modules_path, name, 'package.json')
-          if (fs.existsSync(pkgId)) {
+          const pkgJson = path.join(node_modules_path, name, 'package.json')
+          if (fs.existsSync(pkgJson)) {
             // bare module
-            const pkg = cjs_require(pkgId)
+            const pkg = cjs_require(pkgJson)
             if (pkg.type === 'module') {
               deps.push({ esm: name })
               continue
@@ -109,11 +109,11 @@ export default function optimizer(options: DepOptimizationConfig = {}): Plugin[]
             continue
           }
 
-          const tmp = path.join(node_modules_path, name)
+          const pkgPath = path.join(node_modules_path, name)
           try {
             // dirname or filename 🤔
             // `foo/bar` or `foo/bar/index.js`
-            const filename = cjs_require.resolve(tmp)
+            const filename = cjs_require.resolve(pkgPath)
             if (path.extname(filename) === '.mjs') {
               deps.push({ esm: name, filename })
               continue
@@ -121,7 +121,7 @@ export default function optimizer(options: DepOptimizationConfig = {}): Plugin[]
             deps.push({ cjs: name, filename })
             continue
           } catch (error) {
-            console.log('Can not resolve path:', tmp)
+            console.log('Can not resolve path:', pkgPath)
           }
         }
 
@@ -129,6 +129,7 @@ export default function optimizer(options: DepOptimizationConfig = {}): Plugin[]
           if (!dep.filename) {
             const module = (dep.cjs || dep.esm) as string
             try {
+              // TODO: resolve(, [paths condition])
               dep.filename = cjs_require.resolve(module)
             } catch (error) {
               console.log('Can not resolve module:', module)
