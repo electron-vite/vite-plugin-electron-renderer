@@ -1,9 +1,11 @@
 import fs from 'node:fs'
 import path from 'node:path'
+import crypto from 'node:crypto'
 import { createRequire, builtinModules } from 'node:module'
 import type { Alias, Plugin, UserConfig } from 'vite'
 import esbuild from 'esbuild'
 import libEsm from 'lib-esm'
+import { COLOURS } from 'vite-plugin-utils/function'
 import { builtins } from './build-config'
 
 export type DepOptimizationConfig = {
@@ -27,6 +29,7 @@ const name = 'vite-plugin-electron-renderer:optimizer'
 
 let root: string
 let node_modules_path: string
+let cache: Cache
 
 export default function optimizer(options: DepOptimizationConfig = {}): Plugin[] | undefined {
   const { include, buildOptions } = options
@@ -38,8 +41,7 @@ export default function optimizer(options: DepOptimizationConfig = {}): Plugin[]
       config(config) {
         root = config.root ? path.resolve(config.root) : process.cwd()
         node_modules_path = node_modules(root)
-
-        fs.rmSync(path.join(node_modules_path, CACHE_DIR), { recursive: true, force: true })
+        cache = new Cache(path.join(node_modules_path, CACHE_DIR))
 
         const aliases: Alias[] = [
           {
@@ -121,7 +123,7 @@ export default function optimizer(options: DepOptimizationConfig = {}): Plugin[]
             deps.push({ cjs: name, filename })
             continue
           } catch (error) {
-            console.log('Can not resolve path:', pkgPath)
+            console.log(COLOURS.red('Can not resolve path:'), pkgPath)
           }
         }
 
@@ -132,7 +134,7 @@ export default function optimizer(options: DepOptimizationConfig = {}): Plugin[]
               // TODO: resolve(, [paths condition])
               dep.filename = cjs_require.resolve(module)
             } catch (error) {
-              console.log('Can not resolve module:', module)
+              console.log(COLOURS.red('Can not resolve module:'), module)
             }
           }
           if (!dep.filename) {
@@ -174,9 +176,16 @@ function cjsBundling(args: {
   requireId: string
 }) {
   const { name, require, requireId } = args
+  const { destpath, destname } = dest(name)
+  if (cache.checkHash(destname)) return
+
   const { exports } = libEsm({ exports: Object.keys(cjs_require(requireId)) })
   const code = `const _M_ = require("${require}");\n${exports}`
-  writeFile({ name, code })
+
+  !fs.existsSync(destpath) && fs.mkdirSync(destpath, { recursive: true })
+  fs.writeFileSync(destname, code)
+  cache.writeCache(destname)
+  console.log(COLOURS.cyan('Pre-bundling:'), COLOURS.yellow(name))
 }
 
 async function esmBundling(args: {
@@ -186,6 +195,8 @@ async function esmBundling(args: {
 }) {
   const { name, entry, buildOptions } = args
   const { name_cjs, destname_cjs } = dest(name)
+  if (cache.checkHash(destname_cjs)) return
+
   return esbuild.build({
     entryPoints: [entry],
     outfile: destname_cjs,
@@ -200,6 +211,7 @@ async function esmBundling(args: {
     ...buildOptions,
   }).then(result => {
     if (!result.errors.length) {
+      cache.writeCache(destname_cjs)
       cjsBundling({
         name,
         require: `${CACHE_DIR}/${name}/${name_cjs}`,
@@ -208,17 +220,6 @@ async function esmBundling(args: {
     }
     return result
   })
-}
-
-function writeFile(args: {
-  name: string
-  code: string
-}) {
-  const { name, code } = args
-  const { destpath, destname } = dest(name)
-  !fs.existsSync(destpath) && fs.mkdirSync(destpath, { recursive: true })
-  fs.writeFileSync(destname, code)
-  console.log('Pre-bundling:', name)
 }
 
 function dest(name: string) {
@@ -267,3 +268,72 @@ function node_modules(root: string, count = 0): string {
 }
 // For ts-check
 node_modules.p = ''
+
+// ----------------------------------------
+
+export interface ICache {
+  timestamp?: number
+  optimized?: {
+    [filename: string]: {
+      hash: string
+    }
+  }
+}
+
+class Cache {
+  static getHash(filename: string) {
+    return crypto.createHash('md5').update(fs.readFileSync(filename)).digest('hex')
+  }
+
+  constructor(
+    public root: string,
+    public cacheFile = path.join(root, '_metadata.json'),
+  ) {
+    // TODO: cleanup meta
+  }
+
+  checkHash(filename: string) {
+    if (!fs.existsSync(filename)) {
+      return false
+    }
+    let hash: string
+    try {
+      hash = Cache.getHash(filename)
+    } catch {
+      return false
+    }
+    const { optimized = {} } = this.readCache()
+    for (const [file, meta] of Object.entries(optimized)) {
+      if (filename === file && hash === meta.hash) {
+        return true
+      }
+    }
+    return false
+  }
+
+  readCache(): ICache {
+    const cache: ICache = {}
+    try {
+      const json = JSON.parse(fs.readFileSync(this.cacheFile, 'utf8'))
+      Object.assign(cache, { optimized: json.optimized })
+    } catch { }
+    return cache
+  }
+
+  writeCache(filename: string) {
+    if (!fs.existsSync(filename)) {
+      throw new Error(`${filename} is not exist!`)
+    }
+    const { optimized = {} } = this.readCache()
+    const newCache: ICache = {
+      timestamp: Date.now(),
+      optimized: {
+        ...optimized,
+        [filename]: {
+          hash: Cache.getHash(filename),
+        },
+      },
+    }
+    fs.writeFileSync(this.cacheFile, JSON.stringify(newCache, null, 2))
+  }
+}
