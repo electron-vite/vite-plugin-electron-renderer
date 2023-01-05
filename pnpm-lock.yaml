@@ -9,6 +9,7 @@ importers:
       rollup: ^3.8.1
       typescript: ^4.9.4
       vite: ^4.0.3
+      vite-plugin-utils: ^0.3.6
     dependencies:
       lib-esm: 0.3.0
     devDependencies:
@@ -16,6 +17,7 @@ importers:
       rollup: 3.8.1
       typescript: 4.9.4
       vite: 4.0.3
+      vite-plugin-utils: 0.3.6
 
   examples/quick-start:
     specifiers:
@@ -679,10 +681,10 @@ packages:
     resolution: {integrity: sha512-dQYDuqm/rmy8GSCE6Xl/3ShJg6Ab4bZJMT8KaTKGzT436gl1DN4REP3FCWfXoh75qGTJ+u+WsdnnpO9Jl8nyMA==}
     engines: {node: '>=14.0.0'}
     dependencies:
-      7zip-bin: 5.1.1
       '@develar/schema-utils': 2.6.5
       '@electron/universal': 1.2.1
       '@malept/flatpak-bundler': 0.4.0
+      7zip-bin: 5.1.1
       async-exit-hook: 2.0.1
       bluebird-lst: 1.0.9
       builder-util: 23.6.0
@@ -866,9 +868,9 @@ packages:
   /builder-util/23.6.0:
     resolution: {integrity: sha512-QiQHweYsh8o+U/KNCZFSvISRnvRctb8m/2rB2I1JdByzvNKxPeFLlHFRPQRXab6aYeXc18j9LpsDLJ3sGQmWTQ==}
     dependencies:
-      7zip-bin: 5.1.1
       '@types/debug': 4.1.7
       '@types/fs-extra': 9.0.13
+      7zip-bin: 5.1.1
       app-builder-bin: 4.0.0
       bluebird-lst: 1.0.9
       builder-util-runtime: 9.1.1
@@ -2848,6 +2850,10 @@ packages:
 
   /vite-plugin-electron/0.11.1:
     resolution: {integrity: sha512-pi9Wy4KCGjKIRvp7/5VUOT8BYEAJdZrpy3gI+GhGc5vYs2V9yPxLOtfCqNfSTYqH3uM6hYY6MyifFVku3Wg+2A==}
+    dev: true
+
+  /vite-plugin-utils/0.3.6:
+    resolution: {integrity: sha512-+tZdnTxrDdjPzrlPUyvm52SvOVRibDEnA9NdzQt85UoqXwLGJp4RAkT9fK11KdLMTdJlb9DxCvHrDfsn/lSKug==}
     dev: true
 
   /vite/4.0.3:
