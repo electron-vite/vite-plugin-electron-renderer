@@ -1,3 +1,7 @@
+## 0.11.4 (2023-01-04)
+
+- 502f7f2 feat: support Pre-Bundling cache #15
+
 ## 0.11.3 (2022-11-18)
 
 - cbab7db fix: insert built-in modules to `optimizeDeps.exclude`
