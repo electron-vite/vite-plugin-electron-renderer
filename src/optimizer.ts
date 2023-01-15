@@ -41,7 +41,6 @@ export default function optimizer(options: DepOptimizationConfig = {}): Plugin[]
       config(config) {
         root = config.root ? path.resolve(config.root) : process.cwd()
         node_modules_path = node_modules(root)
-        cache = new Cache(path.join(node_modules_path, CACHE_DIR))
 
         const aliases: Alias[] = [
           {
@@ -68,6 +67,7 @@ export default function optimizer(options: DepOptimizationConfig = {}): Plugin[]
       apply: 'serve',
       async config(config) {
         if (!include?.length) return
+        cache = new Cache(path.join(node_modules_path, CACHE_DIR))
 
         const deps: {
           esm?: string
@@ -312,12 +312,11 @@ class Cache {
   }
 
   readCache(): ICache {
-    const cache: ICache = {}
     try {
-      const json = JSON.parse(fs.readFileSync(this.cacheFile, 'utf8'))
-      Object.assign(cache, { optimized: json.optimized })
-    } catch { }
-    return cache
+      return JSON.parse(fs.readFileSync(this.cacheFile, 'utf8'))
+    } catch {
+      return {}
+    }
   }
 
   writeCache(filename: string) {

@@ -65,9 +65,9 @@ function setOutputFormat(rollupOptions: RollupOptions) {
   rollupOptions.output ??= {}
   if (Array.isArray(rollupOptions.output)) {
     for (const o of rollupOptions.output) {
-      if (o.format === undefined) o.format = 'cjs'
+      o.format ??= 'cjs'
     }
   } else {
-    if (rollupOptions.output.format === undefined) rollupOptions.output.format = 'cjs'
+    rollupOptions.output.format ??= 'cjs'
   }
 }
