@@ -114,6 +114,8 @@ const { readFile } = require('fs')
 
 ## Dependency Pre-Bundling
 
+> &gt;=v0.10.2
+
 When you run vite for the first time, you may notice this message:
 
 ```log
@@ -129,10 +131,10 @@ Pre-bundling: got
 
 **In general**, Vite may not correctly build Node.js packages, especially Node.js C/C++ native modules, but Vite can load them as external packages.  
 Unless you know how to properly build them with Vite.  
-[See example](https://github.com/electron-vite/vite-plugin-electron/blob/14684ba108beec305edf4c9d8865527f6508f987/examples/nodeIntegration/vite.config.ts#L17-L26)
+[See example](https://github.com/electron-vite/vite-plugin-electron-renderer/blob/v0.10.3/examples/quick-start/vite.config.ts#L14-L23)
 
 **By the way**. If an npm package is a pure ESM format package, and the packages it depends on are also in ESM format, then put it in `optimizeDeps.exclude` and it will work normally.  
-[See an explanation of it](https://github.com/electron-vite/vite-plugin-electron/blob/14684ba108beec305edf4c9d8865527f6508f987/examples/nodeIntegration/vite.config.ts#L36-L39)
+[See an explanation of it](https://github.com/electron-vite/vite-plugin-electron-renderer/blob/v0.10.3/examples/quick-start/vite.config.ts#L33-L36)
 
 ## `dependencies` vs `devDependencies`
 
