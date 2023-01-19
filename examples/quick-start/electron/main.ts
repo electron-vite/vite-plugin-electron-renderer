@@ -1,9 +1,9 @@
-process.env['ELECTRON_DISABLE_SECURITY_WARNINGS'] = 'true'
+import { app, BrowserWindow } from "electron";
+import path from "node:path";
 
-import path from 'node:path'
-import { app, BrowserWindow } from 'electron'
+process.env["ELECTRON_DISABLE_SECURITY_WARNINGS"] = "true";
 
-let win: BrowserWindow | null = null
+let win: BrowserWindow | null = null;
 
 app.whenReady().then(() => {
   win = new BrowserWindow({
@@ -13,12 +13,12 @@ app.whenReady().then(() => {
       nodeIntegration: true,
       webSecurity: false,
     },
-  })
+  });
 
   if (process.env.VITE_DEV_SERVER_URL) {
-    win.loadURL(process.env.VITE_DEV_SERVER_URL)
-    win.webContents.openDevTools()
+    win.loadURL(process.env.VITE_DEV_SERVER_URL);
+    win.webContents.openDevTools();
   } else {
-    win.loadFile(path.join(__dirname, '../dist/index.html'))
+    win.loadFile(path.join(__dirname, "../dist/index.html"));
   }
-})
+});

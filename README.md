@@ -35,7 +35,7 @@ export default {
 renderer.js
 
 ```ts
-import { readFile } from 'fs'
+import { readFile } from 'node:fs'
 import { ipcRenderer } from 'electron'
 
 readFile(/* something code... */)
@@ -78,27 +78,27 @@ export interface RendererOptions {
 > Load Electron and Node.js cjs-packages/builtin-modules (Schematic)
 
 ```
-┏———————————————————————————————┓                        ┏—————————————————┓
-│ import { readFile } from 'fs' │                        │ Vite dev server │
-┗———————————————————————————————┛                        ┗—————————————————┛
-                │ 1. Pre-Bundling fs module into                  │
-                │    node_modules/.vite-electron-renderer/fs      │
-                │                                                 │
-                │ 2. HTTP(Request): fs module                     │
-                │ ——————————————————————————————————————————————> │
-                │                                                 │
-                │ 3. Alias redirects to                           │
-                │    node_modules/.vite-electron-renderer/fs      │
-                │    ↓                                            │
-                │    const { readFile } = require('fs')           │
-                │    export { readFile }                          │
-                │                                                 │
-                │ 4. HTTP(Response): fs module                    │
-                │ <—————————————————————————————————————————————— │
-                │                                                 │
-┏———————————————————————————————┓                        ┏—————————————————┓
-│ import { readFile } from 'fs' │                        │ Vite dev server │
-┗———————————————————————————————┛                        ┗—————————————————┛
+┏————————————————————————————————————┓                             ┏—————————————————┓
+│ import { readFile } from 'node:fs' │                             │ Vite dev server │
+┗————————————————————————————————————┛                             ┗—————————————————┛
+                     │ 1. Pre-Bundling fs module into                       │
+                     │    node_modules/.vite-electron-renderer/fs           │
+                     │                                                      │
+                     │ 2. HTTP(Request): fs module                          │
+                     │ ———————————————————————————————————————————————————> │
+                     │                                                      │
+                     │ 3. Alias redirects to                                │
+                     │    node_modules/.vite-electron-renderer/fs           │
+                     │    ↓                                                 │
+                     │    const { readFile } = require('node:fs')           │
+                     │    export { readFile }                               │
+                     │                                                      │
+                     │ 4. HTTP(Response): fs module                         │
+                     │ <——————————————————————————————————————————————————— │
+                     │                                                      │
+┏————————————————————————————————————┓                             ┏—————————————————┓
+│ import { readFile } from 'node:fs' │                             │ Vite dev server │
+┗————————————————————————————————————┛                             ┗—————————————————┛
 ```
 
 ###### Electron-Renderer(vite build)
@@ -107,9 +107,9 @@ export interface RendererOptions {
 2. Modify `rollupOptions.output.format` to `cjs` *(If it you didn't explicitly set it)*.
 
 ```js
-import { readFile } from 'fs'
+import { readFile } from 'node:fs'
 ↓
-const { readFile } = require('fs')
+const { readFile } = require('node:fs')
 ```
 
 ## Dependency Pre-Bundling
@@ -120,6 +120,7 @@ When you run vite for the first time, you may notice this message:
 
 ```log
 $ vite
+Pre-bundling: sqlite3
 Pre-bundling: serialport
 Pre-bundling: electron-store
 Pre-bundling: execa

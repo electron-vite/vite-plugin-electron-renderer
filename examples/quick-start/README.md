@@ -1,13 +1,13 @@
 # Usecase in Electron-Main
 
-- [x] Electron and Node.js API.
+- [x] Electron and builtin packages.
 
-  `electron` `fs`
+  `electron` `node:fs`
 
-- [x] Node.js native-addons.
+- [x] Native packages.
 
   `serialport` `sqlite3`
 
-- [x] Node.js ESM packages.
+- [x] ESM packages.
 
   `execa` `got` `node-fetch`

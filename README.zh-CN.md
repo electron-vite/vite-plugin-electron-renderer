@@ -49,6 +49,7 @@ When you run vite for the first time, you may notice this message:
 
 ```log
 $ vite
+Pre-bundling: sqlite3
 Pre-bundling: serialport
 Pre-bundling: electron-store
 Pre-bundling: execa
