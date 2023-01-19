@@ -1,5 +1,5 @@
-import { SerialPort } from 'serialport'
-// import sqlite3 from 'sqlite3'
+import { SerialPort } from "serialport";
+import sqlite3 from "sqlite3";
 
-console.log('Node.js Native package serialport:\n', SerialPort)
-// console.log('Node.js Native package sqlite3:\n', sqlite3)
+console.log("Native package 'serialport' ->", SerialPort);
+console.log("Native package 'sqlite3' ->", sqlite3);

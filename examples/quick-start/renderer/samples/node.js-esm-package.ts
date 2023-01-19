@@ -1,7 +1,7 @@
-import { execa } from 'execa'
-import nodeFetch from 'node-fetch'
-import got from 'got'
+import fetch from "node-fetch";
+import { execa } from "execa";
+import got from "got";
 
-console.log('Node.js ESM package execa:\n', execa)
-console.log('Node.js ESM package node-fetch:\n', nodeFetch)
-console.log('Node.js ESM package got:\n', got)
+console.log("ESM package 'node-fetch' ->", fetch);
+console.log("ESM package 'execa' ->", execa);
+console.log("ESM package 'got' ->", got);

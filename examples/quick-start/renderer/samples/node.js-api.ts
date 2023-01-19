@@ -1,5 +1,5 @@
-import { ipcRenderer } from 'electron'
-import fs from 'fs/promises'
+import fs from "node:fs/promises";
+import electron from "electron";
 
-console.log('Electron API:\n', ipcRenderer)
-console.log('Node.js API(fs/promises):\n', fs)
+console.log("ฺฺฺBuiltin package 'fs/promises' ->", fs);
+console.log("Electron package ->", electron);
