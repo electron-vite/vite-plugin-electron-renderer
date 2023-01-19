@@ -209,7 +209,7 @@ async function esmBundling(args: {
     .build({
       entryPoints: [entry],
       outfile: destname_cjs,
-      target: "node14",
+      target: "node16",
       format: "cjs",
       bundle: true,
       sourcemap: true,

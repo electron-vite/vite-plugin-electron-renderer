@@ -42,7 +42,7 @@ async function transpile(options, files = entries) {
     const code = fs.readFileSync(file, "utf8");
     const result = await transform(code, {
       loader: "ts",
-      target: "node14",
+      target: "node16",
       ...options,
     });
 
