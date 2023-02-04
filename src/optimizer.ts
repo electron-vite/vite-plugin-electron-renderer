@@ -5,10 +5,10 @@ import { createRequire, builtinModules } from 'node:module'
 import type { Alias, Plugin, UserConfig } from 'vite'
 import esbuild from 'esbuild'
 import libEsm from 'lib-esm'
-import { COLOURS } from 'vite-plugin-utils/function'
+import { COLOURS, node_modules } from 'vite-plugin-utils/function'
 import { builtins } from './build-config'
 
-export type DepOptimizationConfig = {
+export type DepOptimizationOptions = {
   include?: (string | {
     name: string
     /**
@@ -31,7 +31,7 @@ let root: string
 let node_modules_path: string
 let cache: Cache
 
-export default function optimizer(options: DepOptimizationConfig = {}): Plugin[] | undefined {
+export default function optimizer(options: DepOptimizationOptions = {}): Plugin[] | undefined {
   const { include, buildOptions } = options
 
   return [
@@ -40,7 +40,7 @@ export default function optimizer(options: DepOptimizationConfig = {}): Plugin[]
       name: `${name}:built-in`,
       config(config) {
         root = config.root ? path.resolve(config.root) : process.cwd()
-        node_modules_path = node_modules(root)
+        node_modules_path = node_modules(root)[0]
 
         const aliases: Alias[] = [
           {
@@ -252,22 +252,6 @@ function modifyAlias(config: UserConfig, aliases: Alias[]) {
   }
   (config.resolve.alias as Alias[]).push(...aliases)
 }
-
-function node_modules(root: string, count = 0): string {
-  if (node_modules.p) {
-    return node_modules.p
-  }
-  const p = path.join(root, 'node_modules')
-  if (fs.existsSync(p)) {
-    return node_modules.p = p
-  }
-  if (count >= 19) {
-    throw new Error('Can\'t find node_modules directory.')
-  }
-  return node_modules(path.join(root, '..'), count + 1)
-}
-// For ts-check
-node_modules.p = ''
 
 // ----------------------------------------
 
