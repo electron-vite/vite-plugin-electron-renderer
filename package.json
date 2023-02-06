@@ -23,9 +23,6 @@
     "prepublishOnly": "npm run test && npm run build",
     "test": "vitest run"
   },
-  "peerDependencies": {
-    "esbuild": "*"
-  },
   "dependencies": {
     "lib-esm": "~0.3.0"
   },

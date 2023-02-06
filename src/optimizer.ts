@@ -3,7 +3,6 @@ import path from 'node:path'
 import crypto from 'node:crypto'
 import { createRequire, builtinModules } from 'node:module'
 import type { Alias, Plugin, UserConfig } from 'vite'
-import esbuild from 'esbuild'
 import libEsm from 'lib-esm'
 import { COLOURS, node_modules } from 'vite-plugin-utils/function'
 import { builtins } from './build-config'
@@ -191,11 +190,18 @@ function cjsBundling(args: {
 async function esmBundling(args: {
   name: string,
   entry: string,
-  buildOptions?: esbuild.BuildOptions,
+  buildOptions?: import('esbuild').BuildOptions,
 }) {
   const { name, entry, buildOptions } = args
   const { name_cjs, destname_cjs } = dest(name)
   if (cache.checkHash(destname_cjs)) return
+
+  let esbuild: typeof import('esbuild')
+  try {
+    esbuild = await import('esbuild')
+  } catch {
+    throw new Error('[Pre-Bundling] dependency "esbuild". Did you install it?')
+  }
 
   return esbuild.build({
     entryPoints: [entry],
