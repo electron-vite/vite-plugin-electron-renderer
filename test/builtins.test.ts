@@ -3,7 +3,7 @@ import path from 'node:path'
 import { builtinModules } from 'node:module'
 import { expect, test } from 'vitest'
 
-const builtins = builtinModules.filter(m => !m.startsWith('_'))
+const builtins = ['electron', ...builtinModules.filter(m => !m.startsWith('_'))]
 const builtins_dir = path.join(__dirname, '../builtins')
 
 test('builtins', async () => {

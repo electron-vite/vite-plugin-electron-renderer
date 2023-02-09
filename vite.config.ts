@@ -2,9 +2,6 @@ import { defineConfig } from 'vite'
 import { builtinModules } from 'node:module'
 import pkg from './package.json'
 
-// Runs at dev, build, test
-import('./builtins.mjs').then(({ generateBuiltins }) => generateBuiltins())
-
 export default defineConfig({
   build: {
     minify: false,
@@ -28,4 +25,11 @@ export default defineConfig({
       },
     },
   },
+  plugins: [{
+    name: 'vite-plugin-builtins',
+    async config() {
+      // Runs at dev, build, test
+      import('./builtins.mjs').then(({ generateBuiltins }) => generateBuiltins())
+    },
+  }],
 })
