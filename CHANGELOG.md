@@ -1,3 +1,13 @@
+## 0.12.0 (2023-02-09)
+
+#### Main Changed
+
+- c97bd16 refactor: better builtins build
+- 61e9e05 refactor: better polyfill with `nodeIntegration:false` #24
+- 4ef703c feat: lazy load `esbuild`
+- 06e7f31 Merge pull request #25 from electron-vite/vitest
+- 35bb551 feat(test): integrate vitest
+
 ## 0.11.4 (2023-01-04)
 
 - 502f7f2 feat: support Pre-Bundling cache #15
