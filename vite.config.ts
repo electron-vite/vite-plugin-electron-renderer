@@ -1,9 +1,9 @@
-import fs from 'node:fs'
-import path from 'node:path'
 import { defineConfig } from 'vite'
 import { builtinModules } from 'node:module'
-import libEsm from 'lib-esm'
 import pkg from './package.json'
+
+// Runs at dev, build, test
+import('./builtins.mjs').then(({ generateBuiltins }) => generateBuiltins())
 
 export default defineConfig({
   build: {
@@ -29,20 +29,3 @@ export default defineConfig({
     },
   },
 })
-
-// --------------------------------------------------------------------------
-
-export const builtins = builtinModules.filter(m => !m.startsWith('_'))
-const builtins_dir = path.join(__dirname, 'builtins')
-fs.rmSync(builtins_dir, { recursive: true, force: true })
-
-for (const module of builtins) {
-  const filename = path.join(builtins_dir, module) + '.js'
-  const dirname = path.dirname(filename)
-  !fs.existsSync(dirname) && fs.mkdirSync(dirname, { recursive: true })
-
-  const { exports } = libEsm({ exports: Object.keys(require(module)) })
-  fs.writeFileSync(filename, `const _M_ = require("${module}");\n${exports}`)
-}
-
-console.log('[builtins] build success.\n')
