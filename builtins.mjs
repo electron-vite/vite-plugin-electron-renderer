@@ -13,7 +13,7 @@ const electron = typeof require !== 'undefined'
   // All exports module see https://www.electronjs.org -> API -> Renderer Process Modules
   ? require("electron")
   : (function nodeIntegrationWarn() {
-    console.error(\`If you need to use "electron" in the Renderer process, make sure that "nodeIntegration" is enabled in the Main process.\`)
+    console.error(\`If you need to use "electron" in the Renderer process, make sure that "nodeIntegration" is enabled in the Main process.\`);
     return {
       // TODO: polyfill
     };
