@@ -1,73 +1,26 @@
 import fs from 'node:fs'
 import path from 'node:path'
-import { builtinModules } from 'node:module'
-import { type Alias, resolveConfig } from 'vite'
-import {
-  afterAll,
-  describe,
-  expect,
-  it,
-} from 'vitest'
+import { createRequire } from 'node:module'
+import { resolveConfig } from 'vite'
+import { expect, test } from 'vitest'
 import { node_modules } from 'vite-plugin-utils/function'
-import { builtins } from '../src/build-config'
-import {
-  type DepOptimizationOptions,
-  default as optimizer,
-} from '../src/optimizer'
+import optimizer from '../src/optimizer'
 
-let cachePath: string
 
-describe('src/build-config', async () => {
-  it('optimizer.[alias, optimizeDeps]', async () => {
-    const getConfig = (options: DepOptimizationOptions = {}) => resolveConfig({ configFile: false, plugins: [optimizer(options)] }, 'build')
-    const resolved = await getConfig()
+var require = createRequire(import.meta.url)
+const cacheDir = path.join(node_modules(process.cwd())[0], '.vite-electron-renderer')
+fs.rmSync(cacheDir, { recursive: true, force: true })
 
-    // ---- alias ----
-    const aliases: Alias[] = [
-      {
-        find: 'electron',
-        replacement: 'vite-plugin-electron-renderer/electron-renderer',
-      },
-      ...builtins
-        .filter(m => m !== 'electron')
-        .filter(m => !m.startsWith('node:'))
-        .map<Alias>(m => ({
-          find: new RegExp(`^(node:)?${m}$`),
-          replacement: `vite-plugin-electron-renderer/builtins/${m}`,
-        })),
-    ]
-    for (const alias of aliases) {
-      const _alias = resolved.resolve.alias.find(a => (a.find.toString() === alias.find.toString() && a.replacement === alias.replacement))
-      expect(Object.prototype.toString.call(_alias)).eq('[object Object]')
-    }
+test('src/optimizer.ts', async () => {
+  await resolveConfig({
+    configFile: false,
+    plugins: [optimizer({
+      include: [{ name: 'vite-plugin-utils/constant', type: 'module' }],
+    })],
+  }, 'serve')
 
-    // ---- optimizeDeps ----
-    const modules = builtinModules.filter(m => !m.startsWith('_'))
-    const exclude = [
-      'electron',
-      ...modules,
-      ...modules.map(mod => `node:${mod}`),
-      'vite-plugin-electron-renderer/electron-renderer',
-      ...modules.map(m => `vite-plugin-electron-renderer/builtins/${m}`),
-    ]
-    expect(resolved.optimizeDeps.exclude).toEqual(exclude)
-  })
+  const cjsModule = require(path.join(cacheDir, 'vite-plugin-utils/constant/index.cjs'))
+  const esmModule = await import('vite-plugin-utils/constant')
 
-  it('optimizer.PreBundle', async () => {
-    const resolved = await resolveConfig({
-      configFile: false,
-      plugins: [optimizer({
-        include: [{ name: 'vite-plugin-utils/constant', type: 'module' }],
-      })],
-    }, 'serve')
-    cachePath = path.join(node_modules(resolved.root)[0], '.vite-electron-renderer')
-    const cjsModule = require(path.join(cachePath, 'vite-plugin-utils/constant/index.cjs'))
-    const esmModule = await import('vite-plugin-utils/constant')
-
-    expect(Object.keys(cjsModule)).toEqual(Object.keys(esmModule))
-  })
-})
-
-afterAll(() => {
-  fs.rmSync(cachePath, { recursive: true, force: true })
+  expect(Object.keys(cjsModule)).toEqual(Object.keys(esmModule))
 })

@@ -1,14 +1,21 @@
 import { builtinModules } from 'node:module'
-import { resolveConfig } from 'vite'
-import type { ExternalOption, OutputOptions, RollupOptions } from 'rollup'
+import {
+  type Alias,
+  resolveConfig,
+} from 'vite'
+import type {
+  ExternalOption,
+  OutputOptions,
+  RollupOptions,
+} from 'rollup'
 import {
   describe,
   expect,
   it,
 } from 'vitest'
-import buildConfig from '../src/build-config'
+import buildConfig, { builtins } from '../src/build-config'
 
-describe('src/build-config', () => {
+describe('src/build-config.ts', () => {
   it('buildConfig.external', async () => {
     const builtins: ExternalOption = [
       'electron',
@@ -60,4 +67,41 @@ describe('src/build-config', () => {
     const outputArr = (await getConfig([{}])).build.rollupOptions.output as OutputOptions[]
     expect(outputArr[0].format).eq('cjs')
   })
+
+  it('buildConfig.[alias, optimizeDeps]', async () => {
+    const getConfig = (nodeIntegration: boolean) => resolveConfig({ configFile: false, plugins: [buildConfig(nodeIntegration)] }, 'build')
+    const resolvedNodeFalse = await getConfig(false)
+    const resolvedNodeTrue = await getConfig(true)
+    const aliasesNodeFalse: Alias[] = [
+      {
+        find: 'electron',
+        replacement: 'vite-plugin-electron-renderer/builtins/electron',
+      },
+    ]
+    const aliasesNodeTrue: Alias[] = aliasesNodeFalse.concat(builtins
+      .filter(m => m !== 'electron')
+      .filter(m => !m.startsWith('node:'))
+      .map<Alias>(m => ({
+        find: new RegExp(`^(node:)?${m}$`),
+        replacement: `vite-plugin-electron-renderer/builtins/${m}`,
+      })))
+
+    // ---- alias ----
+    expect(excludeViteAlias(resolvedNodeFalse.resolve.alias)).toEqual(aliasesNodeFalse)
+    expect(excludeViteAlias(resolvedNodeTrue.resolve.alias).map(a => a.replacement)).toEqual(aliasesNodeTrue.map(a => a.replacement))
+
+    // ---- optimizeDeps ----
+    expect(resolvedNodeFalse.optimizeDeps.exclude).toEqual([
+      'electron',
+      'vite-plugin-electron-renderer/builtins/electron',
+    ])
+    expect(resolvedNodeTrue.optimizeDeps.exclude).toEqual([
+      'electron',
+      'vite-plugin-electron-renderer/builtins/electron',
+    ].concat(aliasesNodeTrue.map(a => a.replacement)))
+  })
 })
+
+function excludeViteAlias(aliases: Alias[]) {
+  return aliases.filter(a => !a.find.toString().includes('@vite'))
+}
