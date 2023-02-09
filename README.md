@@ -1,11 +1,30 @@
-# vite-plugin-electron-renderer
+<p align="center">
+  <img width="170" src="https://github.com/electron-vite/vite-plugin-electron/blob/main/logo.svg?raw=true">
+</p>
+<div align="center">
+  <h1>vite-plugin-electron-renderer</h1>
+</div>
+<p align="center">Support use Node.js API in Electron-Renderer</p>
+<p align="center">
+  <a href="https://npmjs.com/package/vite-plugin-electron-renderer">
+    <img src="https://img.shields.io/npm/v/vite-plugin-electron-renderer.svg">
+  </a>
+  <a href="https://npmjs.com/package/vite-plugin-electron-renderer">
+    <img src="https://img.shields.io/npm/dm/vite-plugin-electron-renderer.svg">
+  </a>
+  <a href="https://discord.gg/YfjFuEgVUR">
+    <img src="https://img.shields.io/badge/chat-discord-blue?logo=discord">
+  </a>
+</p>
+<p align="center">
+  <strong>
+    <span>English</span>
+    |
+    <a href="https://github.com/electron-vite/vite-plugin-electron-renderer/blob/main/README.zh-CN.md">简体中文</a>
+  </strong>
+</p>
 
-Support use Node.js API in Electron-Renderer
-
-[![NPM version](https://img.shields.io/npm/v/vite-plugin-electron-renderer.svg)](https://npmjs.org/package/vite-plugin-electron-renderer)
-[![NPM Downloads](https://img.shields.io/npm/dm/vite-plugin-electron-renderer.svg)](https://npmjs.org/package/vite-plugin-electron-renderer)
-
-English | [简体中文](https://github.com/electron-vite/vite-plugin-electron-renderer/blob/main/README.zh-CN.md)
+<br/>
 
 ## Install
 
@@ -15,6 +34,7 @@ npm i vite-plugin-electron-renderer -D
 
 ## Examples
 
+- [electron-forge](https://github.com/electron-vite/vite-plugin-electron-renderer/tree/main/examples/electron-forge) - use in [Electron Forge](https://www.electronforge.io/) scaffolds.
 - [quick-start](https://github.com/electron-vite/vite-plugin-electron-renderer/tree/main/examples/quick-start)
 - [worker](https://github.com/electron-vite/vite-plugin-electron-renderer/tree/main/examples/worker)
 
