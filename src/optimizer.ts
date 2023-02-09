@@ -2,10 +2,14 @@ import fs from 'node:fs'
 import path from 'node:path'
 import crypto from 'node:crypto'
 import { createRequire, builtinModules } from 'node:module'
-import type { Alias, Plugin, UserConfig } from 'vite'
+import type { Alias, Plugin } from 'vite'
 import libEsm from 'lib-esm'
-import { COLOURS, node_modules } from 'vite-plugin-utils/function'
-import { builtins } from './build-config'
+import { COLOURS, node_modules as find_node_modules } from 'vite-plugin-utils/function'
+import {
+  builtins,
+  modifyAlias,
+  modifyOptimizeDeps,
+} from './build-config'
 
 export type DepOptimizationOptions = {
   include?: (string | {
@@ -24,149 +28,122 @@ export type DepOptimizationOptions = {
 
 const cjs_require = createRequire(import.meta.url)
 const CACHE_DIR = '.vite-electron-renderer'
-const name = 'vite-plugin-electron-renderer:optimizer'
 
-let root: string
 let node_modules_path: string
 let cache: Cache
 
-export default function optimizer(options: DepOptimizationOptions = {}): Plugin[] | undefined {
+export default function optimizer(options: DepOptimizationOptions = {}): Plugin {
   const { include, buildOptions } = options
 
-  return [
-    {
-      // Built-in modules should always be Pre-Bundling.
-      name: `${name}:built-in`,
-      config(config) {
-        root = config.root ? path.resolve(config.root) : process.cwd()
-        node_modules_path = node_modules(root)[0]
+  return {
+    name: 'vite-plugin-electron-renderer:optimizer',
+    // At `vite build` phase, Node.js npm-pkgs can be built correctly by Vite.
+    // TODO: consider support `vite build` phase, like Vite v3.0.0
+    apply: 'serve',
+    async config(config) {
+      if (!include?.length) return
 
-        const aliases: Alias[] = [
-          {
-            find: 'electron',
-            replacement: 'vite-plugin-electron-renderer/electron-renderer',
-          },
-          ...builtins
-            .filter(m => m !== 'electron')
-            .filter(m => !m.startsWith('node:'))
-            .map<Alias>(m => ({
-              find: new RegExp(`^(node:)?${m}$`),
-              replacement: `vite-plugin-electron-renderer/builtins/${m}`,
-            })),
-        ]
+      node_modules_path = find_node_modules(config.root ? path.resolve(config.root) : process.cwd())[0]
+      cache = new Cache(path.join(node_modules_path, CACHE_DIR))
 
-        modifyAlias(config, aliases)
-        modifyOptimizeDeps(config, builtins.concat(aliases.map(({ replacement }) => replacement)))
-      },
-    },
-    {
-      name: `${name}:npm-pkgs`,
-      // At `vite build` phase, Node.js npm-pkgs can be built correctly by Vite.
-      // TODO: consider support `vite build` phase, like Vite v3.0.0
-      apply: 'serve',
-      async config(config) {
-        if (!include?.length) return
-        cache = new Cache(path.join(node_modules_path, CACHE_DIR))
+      const deps: {
+        esm?: string
+        cjs?: string
+        filename?: string
+      }[] = []
+      const aliases: Alias[] = []
+      const optimizeDepsExclude = []
 
-        const deps: {
-          esm?: string
-          cjs?: string
-          filename?: string
-        }[] = []
-        const aliases: Alias[] = []
-        const optimizeDepsExclude = []
+      for (const item of include) {
+        let name: string
+        let type: string | undefined
+        if (typeof item === 'string') {
+          name = item
+        } else {
+          name = item.name
+          type = item.type
+        }
+        if (type === 'module') {
+          deps.push({ esm: name })
+          continue
+        }
+        if (type === 'commonjs') {
+          deps.push({ cjs: name })
+          continue
+        }
+        if (builtins.includes(name)) {
+          // Process in `vite-plugin-electron-renderer:builtins` plugin
+          continue
+        }
 
-        for (const item of include) {
-          let name: string
-          let type: string | undefined
-          if (typeof item === 'string') {
-            name = item
-          } else {
-            name = item.name
-            type = item.type
-          }
-          if (type === 'module') {
+        const pkgJson = path.join(node_modules_path, name, 'package.json')
+        if (fs.existsSync(pkgJson)) {
+          // bare module
+          const pkg = cjs_require(pkgJson)
+          if (pkg.type === 'module') {
             deps.push({ esm: name })
             continue
           }
-          if (type === 'commonjs') {
-            deps.push({ cjs: name })
-            continue
-          }
-          if (builtins.includes(name)) {
-            // Process in `built-in` plugin
-            continue
-          }
+          deps.push({ cjs: name })
+          continue
+        }
 
-          const pkgJson = path.join(node_modules_path, name, 'package.json')
-          if (fs.existsSync(pkgJson)) {
-            // bare module
-            const pkg = cjs_require(pkgJson)
-            if (pkg.type === 'module') {
-              deps.push({ esm: name })
-              continue
-            }
-            deps.push({ cjs: name })
+        const pkgPath = path.join(node_modules_path, name)
+        try {
+          // dirname or filename 🤔
+          // `foo/bar` or `foo/bar/index.js`
+          const filename = cjs_require.resolve(pkgPath)
+          if (path.extname(filename) === '.mjs') {
+            deps.push({ esm: name, filename })
             continue
           }
+          deps.push({ cjs: name, filename })
+          continue
+        } catch (error) {
+          console.log(COLOURS.red('Can not resolve path:'), pkgPath)
+        }
+      }
 
-          const pkgPath = path.join(node_modules_path, name)
+      for (const dep of deps) {
+        if (!dep.filename) {
+          const module = (dep.cjs || dep.esm) as string
           try {
-            // dirname or filename 🤔
-            // `foo/bar` or `foo/bar/index.js`
-            const filename = cjs_require.resolve(pkgPath)
-            if (path.extname(filename) === '.mjs') {
-              deps.push({ esm: name, filename })
-              continue
-            }
-            deps.push({ cjs: name, filename })
-            continue
+            // TODO: resolve(, [paths condition])
+            dep.filename = cjs_require.resolve(module)
           } catch (error) {
-            console.log(COLOURS.red('Can not resolve path:'), pkgPath)
+            console.log(COLOURS.red('Can not resolve module:'), module)
           }
         }
-
-        for (const dep of deps) {
-          if (!dep.filename) {
-            const module = (dep.cjs || dep.esm) as string
-            try {
-              // TODO: resolve(, [paths condition])
-              dep.filename = cjs_require.resolve(module)
-            } catch (error) {
-              console.log(COLOURS.red('Can not resolve module:'), module)
-            }
-          }
-          if (!dep.filename) {
-            continue
-          }
-
-          if (dep.cjs) {
-            cjsBundling({
-              name: dep.cjs,
-              require: dep.cjs,
-              requireId: dep.filename,
-            })
-          } else if (dep.esm) {
-            esmBundling({
-              name: dep.esm,
-              entry: dep.filename,
-              buildOptions,
-            })
-          }
-
-          const name = dep.cjs || dep.esm
-          if (name) {
-            optimizeDepsExclude.push(name)
-            const { destname } = dest(name)
-            aliases.push({ find: name, replacement: destname })
-          }
+        if (!dep.filename) {
+          continue
         }
 
-        modifyAlias(config, aliases)
-        modifyOptimizeDeps(config, optimizeDepsExclude)
-      },
+        if (dep.cjs) {
+          cjsBundling({
+            name: dep.cjs,
+            require: dep.cjs,
+            requireId: dep.filename,
+          })
+        } else if (dep.esm) {
+          esmBundling({
+            name: dep.esm,
+            entry: dep.filename,
+            buildOptions,
+          })
+        }
+
+        const name = dep.cjs || dep.esm
+        if (name) {
+          optimizeDepsExclude.push(name)
+          const { destname } = dest(name)
+          aliases.push({ find: name, replacement: destname })
+        }
+      }
+
+      modifyAlias(config, aliases)
+      modifyOptimizeDeps(config, optimizeDepsExclude)
     },
-  ]
+  }
 }
 
 function cjsBundling(args: {
@@ -240,23 +217,6 @@ function dest(name: string) {
     destname: path.join(destpath, name_js),
     destname_cjs: path.join(destpath, name_cjs),
   }
-}
-
-function modifyOptimizeDeps(config: UserConfig, exclude: string[]) {
-  config.optimizeDeps ??= {}
-  config.optimizeDeps.exclude ??= []
-  config.optimizeDeps.exclude.push(...exclude)
-}
-
-function modifyAlias(config: UserConfig, aliases: Alias[]) {
-  config.resolve ??= {}
-  config.resolve.alias ??= []
-  if (Object.prototype.toString.call(config.resolve.alias) === '[object Object]') {
-    config.resolve.alias = Object
-      .entries(config.resolve.alias)
-      .reduce<Alias[]>((memo, [find, replacement]) => memo.concat({ find, replacement }), [])
-  }
-  (config.resolve.alias as Alias[]).push(...aliases)
 }
 
 // ----------------------------------------
