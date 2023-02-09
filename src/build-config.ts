@@ -35,10 +35,12 @@ export default function buildConfig(nodeIntegration?: boolean): Plugin[] {
         modifyAlias(config, aliases)
         modifyOptimizeDeps(
           config,
-          [
-            'electron',
-            'vite-plugin-electron-renderer/builtins/electron',
-          ].concat(nodeIntegration ? aliases.map(({ replacement }) => replacement) : []),
+          nodeIntegration
+            ? builtins.concat(aliases.map(({ replacement }) => replacement))
+            : [
+              'electron',
+              'vite-plugin-electron-renderer/builtins/electron',
+            ],
         )
       },
     },
@@ -109,7 +111,7 @@ function setOutputFormat(rollupOptions: RollupOptions) {
 export function modifyOptimizeDeps(config: UserConfig, exclude: string[]) {
   config.optimizeDeps ??= {}
   config.optimizeDeps.exclude ??= []
-  config.optimizeDeps.exclude.push(...exclude)
+  config.optimizeDeps.exclude.push(...exclude.filter(e => !config.optimizeDeps?.exclude?.includes(e)))
 }
 
 export function modifyAlias(config: UserConfig, aliases: Alias[]) {

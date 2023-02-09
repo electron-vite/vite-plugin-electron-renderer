@@ -95,10 +95,7 @@ describe('src/build-config.ts', () => {
       'electron',
       'vite-plugin-electron-renderer/builtins/electron',
     ])
-    expect(resolvedNodeTrue.optimizeDeps.exclude).toEqual([
-      'electron',
-      'vite-plugin-electron-renderer/builtins/electron',
-    ].concat(aliasesNodeTrue.map(a => a.replacement)))
+    expect(resolvedNodeTrue.optimizeDeps.exclude).toEqual(builtins.concat(aliasesNodeTrue.map(a => a.replacement)))
   })
 })
 

@@ -1,3 +1,10 @@
+## 0.12.1 (2023-02-09)
+
+#### Main Changed
+
+9803675 fix(test): the right time
+41bff23 fix: `optimizeDeps.exclude` builtin modules #27
+
 ## 0.12.0 (2023-02-09)
 
 #### Main Changed

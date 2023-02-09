@@ -9,27 +9,28 @@
 > 加载 Electron、Node.js CJS 包/内置模块/electron (示意图)
 
 ```
-┏———————————————————————————————┓                        ┏—————————————————┓
-│ import { readFile } from 'fs' │                        │ Vite dev server │
-┗———————————————————————————————┛                        ┗—————————————————┛
-                │ 1. Pre-Bundling fs module into                  │
-                │    node_modules/.vite-electron-renderer/fs      │
-                │                                                 │
-                │ 2. HTTP(Request): fs module                     │
-                │ ——————————————————————————————————————————————> │
-                │                                                 │
-                │ 3. Alias redirects to                           │
-                │    node_modules/.vite-electron-renderer/fs      │
-                │    ↓                                            │
-                │    const { readFile } = require('fs')           │
-                │    export { readFile }                          │
-                │                                                 │
-                │ 4. HTTP(Response): fs module                    │
-                │ <—————————————————————————————————————————————— │
-                │                                                 │
-┏———————————————————————————————┓                        ┏—————————————————┓
-│ import { readFile } from 'fs' │                        │ Vite dev server │
-┗———————————————————————————————┛                        ┗—————————————————┛
+ ┏————————————————————————————————————————┓                 ┏—————————————————┓
+ │ import { ipcRenderer } from 'electron' │                 │ Vite dev server │
+ ┗————————————————————————————————————————┛                 ┗—————————————————┛
+                 │                                                   │
+                 │ 1. Pre-Bundling electron module into              │
+                 │    node_modules/.vite-electron-renderer/electron  │
+                 │                                                   │
+                 │ 2. HTTP(Request): electron module                 │
+                 │ ————————————————————————————————————————————————> │
+                 │                                                   │
+                 │ 3. Alias redirects to                             │
+                 │    node_modules/.vite-electron-renderer/electron  │
+                 │    ↓                                              │
+                 │    const { ipcRenderer } = require('electron')    │
+                 │    export { ipcRenderer }                         │
+                 │                                                   │
+                 │ 4. HTTP(Response): electron module                │
+                 │ <———————————————————————————————————————————————— │
+                 │                                                   │
+ ┏————————————————————————————————————————┓                 ┏—————————————————┓
+ │ import { ipcRenderer } from 'electron' │                 │ Vite dev server │
+ ┗————————————————————————————————————————┛                 ┗—————————————————┛
 ```
 
 ###### Electron-Renderer(vite build)
