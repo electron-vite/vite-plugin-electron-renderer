@@ -1,5 +1,9 @@
 import { builtinModules } from 'node:module'
-import type { Plugin } from 'vite'
+import type {
+  Alias,
+  Plugin,
+  UserConfig,
+} from 'vite'
 import type { ExternalOption, RollupOptions } from 'rollup'
 
 export const builtins = [
@@ -8,34 +12,64 @@ export const builtins = [
   ...builtinModules.filter(m => !m.startsWith('_')).map(mod => `node:${mod}`),
 ]
 
-export default function buildConfig(nodeIntegration?: boolean): Plugin {
-  return {
-    name: 'vite-plugin-electron-renderer:build-config',
-    apply: 'build',
-    config(config) {
-      // Make sure that Electron can be loaded into the local file using `loadFile` after packaging
-      config.base ??= './'
+export default function buildConfig(nodeIntegration?: boolean): Plugin[] {
+  return [
+    {
+      name: 'vite-plugin-electron-renderer:builtins',
+      config(config) {
+        const aliases: Alias[] = [
+          // Always polyfill electron.
+          {
+            find: 'electron',
+            replacement: 'vite-plugin-electron-renderer/builtins/electron',
+          },
+          ...(nodeIntegration ? builtins
+            .filter(m => m !== 'electron')
+            .filter(m => !m.startsWith('node:'))
+            .map<Alias>(m => ({
+              find: new RegExp(`^(node:)?${m}$`),
+              replacement: `vite-plugin-electron-renderer/builtins/${m}`,
+            })) : []),
+        ]
 
-      config.build ??= {}
-
-      // TODO: init `config.build.target`
-      // https://github.com/vitejs/vite/pull/8843
-
-      // https://github.com/electron-vite/electron-vite-vue/issues/107
-      config.build.cssCodeSplit ??= false
-
-      // TODO: compatible with custom assetsDir
-      // This will guarantee the proper loading of static resources, such as images, `worker.js`
-      // The `.js` file can be loaded correctly with cjs-shim.ts
-      config.build.assetsDir ??= ''
-
-      if (nodeIntegration) {
-        config.build.rollupOptions ??= {}
-        config.build.rollupOptions.external = withExternal(config.build.rollupOptions.external)
-        setOutputFormat(config.build.rollupOptions)
-      }
+        modifyAlias(config, aliases)
+        modifyOptimizeDeps(
+          config,
+          [
+            'electron',
+            'vite-plugin-electron-renderer/builtins/electron',
+          ].concat(nodeIntegration ? aliases.map(({ replacement }) => replacement) : []),
+        )
+      },
     },
-  }
+    {
+      name: 'vite-plugin-electron-renderer:build-config',
+      apply: 'build',
+      config(config) {
+        // Make sure that Electron can be loaded into the local file using `loadFile` after packaging
+        config.base ??= './'
+
+        config.build ??= {}
+
+        // TODO: init `config.build.target`
+        // https://github.com/vitejs/vite/pull/8843
+
+        // https://github.com/electron-vite/electron-vite-vue/issues/107
+        config.build.cssCodeSplit ??= false
+
+        // TODO: compatible with custom assetsDir
+        // This will guarantee the proper loading of static resources, such as images, `worker.js`
+        // The `.js` file can be loaded correctly with cjs-shim.ts
+        config.build.assetsDir ??= ''
+
+        if (nodeIntegration) {
+          config.build.rollupOptions ??= {}
+          config.build.rollupOptions.external = withExternal(config.build.rollupOptions.external)
+          setOutputFormat(config.build.rollupOptions)
+        }
+      },
+    },
+  ]
 }
 
 function withExternal(external?: ExternalOption) {
@@ -70,4 +104,21 @@ function setOutputFormat(rollupOptions: RollupOptions) {
   } else {
     rollupOptions.output.format ??= 'cjs'
   }
+}
+
+export function modifyOptimizeDeps(config: UserConfig, exclude: string[]) {
+  config.optimizeDeps ??= {}
+  config.optimizeDeps.exclude ??= []
+  config.optimizeDeps.exclude.push(...exclude)
+}
+
+export function modifyAlias(config: UserConfig, aliases: Alias[]) {
+  config.resolve ??= {}
+  config.resolve.alias ??= []
+  if (Object.prototype.toString.call(config.resolve.alias) === '[object Object]') {
+    config.resolve.alias = Object
+      .entries(config.resolve.alias)
+      .reduce<Alias[]>((memo, [find, replacement]) => memo.concat({ find, replacement }), [])
+  }
+  (config.resolve.alias as Alias[]).push(...aliases)
 }
