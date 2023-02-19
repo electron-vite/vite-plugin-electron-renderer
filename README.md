@@ -34,35 +34,85 @@ npm i vite-plugin-electron-renderer -D
 
 ## Examples
 
-- [electron-forge](https://github.com/electron-vite/vite-plugin-electron-renderer/tree/main/examples/electron-forge) - use in [Electron Forge](https://www.electronforge.io/) scaffolds.
+- [electron-forge](https://github.com/electron-vite/vite-plugin-electron-renderer/tree/main/examples/electron-forge) - use in [Electron Forge](https://www.electronforge.io/)
 - [quick-start](https://github.com/electron-vite/vite-plugin-electron-renderer/tree/main/examples/quick-start)
 - [worker](https://github.com/electron-vite/vite-plugin-electron-renderer/tree/main/examples/worker)
 
 ## Usage
 
-vite.config.ts
+1. This just modifies some of Vite's default config to make the Renderer process works.
 
 ```js
 import renderer from 'vite-plugin-electron-renderer'
 
 export default {
   plugins: [
-    renderer(/* options */),
+    renderer(),
   ],
 }
 ```
 
-renderer.js
+2. Using the Electron and Node.js API in the Renderer process.
+
+```js
+import renderer from 'vite-plugin-electron-renderer'
+
+export default {
+  plugins: [
+    renderer({
+      nodeIntegration: true,
+    }),
+  ],
+}
+```
 
 ```ts
+// e.g. - renderer.js
 import { readFile } from 'fs'
 import { ipcRenderer } from 'electron'
 
-readFile(/* something code... */)
-ipcRenderer.on('event-name', () => {/* something code... */})
+readFile('foo.txt')
+ipcRenderer.on('event-name', () => {/* something */})
 ```
 
-API *(Define)*
+3. When using third-party Node.js modules, keep the following points in mind.
+
+  - Most third-party modules should be Pre-Bundling, unless it is a pure ESM module
+  - Pre-Bundling replaces Vite's built-in [Pre-Bundling](https://vitejs.dev/guide/dep-pre-bundling.html#dependency-pre-bundling), which is intended for the Renderer process
+  - Pre-Bundling is always a no-brainer, but it sacrifices some performance, so use it correctly
+  - The C/C++ modules must be in dependencies, it cannot be built correctly by Vite
+
+```js
+import renderer from 'vite-plugin-electron-renderer'
+
+export default {
+  plugins: [
+    renderer({
+      // Enables use of Node.js API in the Renderer-process
+      nodeIntegration: true,
+      // Like Vite's pre bundling
+      optimizeDeps: {
+        // Only vite serve
+        include: [
+          'serialport',     // cjs(C++)
+          'electron-store', // cjs
+          'node-fetch',     // esm
+        ],
+      },
+    }),
+  ],
+  build: {
+    rollupOptions: {
+      // Only vite build
+      external: [
+        'serialport',
+      ],
+    },
+  },
+}
+```
+
+## API *(Define)*
 
 `renderer(options: RendererOptions)`
 
@@ -143,9 +193,7 @@ When you run vite for the first time, you may notice this message:
 $ vite
 Pre-bundling: serialport
 Pre-bundling: electron-store
-Pre-bundling: execa
 Pre-bundling: node-fetch
-Pre-bundling: got
 ```
 
 #### The Why
