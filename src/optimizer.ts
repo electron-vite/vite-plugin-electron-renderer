@@ -12,6 +12,9 @@ import {
 } from './build-config'
 
 export type DepOptimizationOptions = {
+  /**
+   * Explicitly specify which modules need to be Pre-Bundling, as they need to be inserted in advance into Vite's built-in Pre-Bundling(optimizeDeps.exclude).
+   */
   include?: (string | {
     name: string
     /**
@@ -19,7 +22,7 @@ export type DepOptimizationOptions = {
      * - `commonjs` - Only the ESM code snippet is wrapped
      * - `module` - First build the code as cjs via esbuild, then wrap the ESM code snippet
      */
-    type?: "commonjs" | "module"
+    type?: 'commonjs' | 'module'
   })[]
   buildOptions?: import('esbuild').BuildOptions
   // TODO: consider support webpack 🤔

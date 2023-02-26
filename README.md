@@ -127,6 +127,9 @@ export interface RendererOptions {
    * @see https://vitejs.dev/guide/dep-pre-bundling.html
    */
   optimizeDeps?: {
+    /**
+     * Explicitly specify which modules need to be Pre-Bundling, as they need to be inserted in advance into Vite's built-in Pre-Bundling(optimizeDeps.exclude).
+     */
     include?: (string | {
       name: string
       /**
@@ -134,7 +137,7 @@ export interface RendererOptions {
        * - `commonjs` - Only the ESM code snippet is wrapped
        * - `module` - First build the code as cjs via esbuild, then wrap the ESM code snippet
        */
-      type?: "commonjs" | "module"
+      type?: 'commonjs' | 'module'
     })[]
     buildOptions?: import('esbuild').BuildOptions
   }
