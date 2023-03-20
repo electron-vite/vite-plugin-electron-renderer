@@ -46,22 +46,18 @@ const { ipcRenderer } = require('electron')
 
 ## Dependency Pre-Bundling
 
-When you run vite for the first time, you may notice this message:
+**通常的**，Vite 会将第三方模块以 Web 的使用格式预构建，但它不适用 Electron 渲染进程，特别是 C/C++ 模块。所以我们必须为此做一点改变。  
+当一个模块被检测为 `cjs` 模块时，它将被会预构建成下面的格式。
 
-```log
-$ vite
-Pre-bundling: serialport
-Pre-bundling: electron-store
-Pre-bundling: execa
-Pre-bundling: node-fetch
-Pre-bundling: got
+```js
+const lib = require("cjs-module");
+
+export const member = lib.member;
+export default (lib.default || lib);
 ```
 
-#### 为啥
+[看看源码](https://github.com/electron-vite/vite-plugin-electron-renderer/blob/v0.13.0/src/optimizer.ts#L139-L142)
 
-**通常的**，Vite 可能不能正确的构建 Node.js 包，尤其是 Node.js C/C++ 原生模块，但是 Vite 可以将它们以外部包(`external`)的形式加载它们。  
-**除非你知道如何用 Vite 正确的构建它们 -- 鲁迅** 
-[使用案例](https://github.com/electron-vite/vite-plugin-electron/blob/14684ba108beec305edf4c9d8865527f6508f987/examples/nodeIntegration/vite.config.ts#L17-L26)
 
 **顺带说一句**. 如果一个 npm 包是个一纯 ESM 格式包，并且它自身的依赖也是 ESM 格式包，那么直接包名放到 `optimizeDeps.exclude` 中即可正常使用。   
 [这里解释了它](https://github.com/electron-vite/vite-plugin-electron/blob/14684ba108beec305edf4c9d8865527f6508f987/examples/nodeIntegration/vite.config.ts#L36-L39)
