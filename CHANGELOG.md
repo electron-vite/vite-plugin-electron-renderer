@@ -1,3 +1,13 @@
+## 0.13.0 (2023-03-20)
+
+#### Break!
+
+Since `0.13.0`, Pre-Bundling will be handled automatically within the plugin
+
+#### Main Changed
+
+- 485a516 feat!: Pre-Bundling modules for Electron Renderer process
+
 ## 0.12.1 (2023-02-09)
 
 #### Main Changed
