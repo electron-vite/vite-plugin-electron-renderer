@@ -19,7 +19,8 @@
   "license": "MIT",
   "scripts": {
     "dev": "vite build --watch",
-    "build": "tsc --emitDeclarationOnly && vite build",
+    "build": "vite build",
+    "types": "tsc --emitDeclarationOnly",
     "prepublishOnly": "npm run test && npm run build",
     "test": "vitest run"
   },

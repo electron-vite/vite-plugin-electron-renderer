@@ -1,5 +1,8 @@
-import { defineConfig } from 'vite'
+import fs from 'node:fs'
+import path from 'node:path'
+import { spawn } from 'node:child_process'
 import { builtinModules } from 'node:module'
+import { defineConfig } from 'vite'
 import pkg from './package.json'
 
 export default defineConfig({
@@ -25,11 +28,39 @@ export default defineConfig({
       },
     },
   },
-  plugins: [{
-    name: 'vite-plugin-builtins',
-    async config() {
-      // Runs at dev, build, test
-      import('./builtins.mjs').then(({ generateBuiltins }) => generateBuiltins())
+  plugins: [
+    {
+      name: 'vite-plugin-builtins',
+      async config() {
+        // Runs at dev, build, test
+        import('./builtins.mjs').then(({ generateBuiltins }) => generateBuiltins())
+      },
     },
-  }],
+    {
+      name: 'generate-types',
+      async closeBundle() {
+        removeTypes()
+        generateTypes()
+      },
+    }
+  ],
 })
+
+function removeTypes() {
+  fs.rmSync(path.join(__dirname, 'types'), { recursive: true, force: true })
+}
+
+function generateTypes() {
+  return new Promise(resolve => {
+    const cp = spawn(
+      process.platform === 'win32' ? 'npm.cmd' : 'npm',
+      ['run', 'types'],
+      { stdio: 'inherit' },
+    )
+    cp.on('exit', code => {
+      !code && console.log('[types]', 'declaration generated')
+      resolve(code)
+    })
+    cp.on('error', process.exit)
+  })
+}
