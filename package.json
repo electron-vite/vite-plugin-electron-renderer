@@ -27,12 +27,12 @@
     "lib-esm": "~0.3.0"
   },
   "devDependencies": {
-    "esbuild": "^0.16.11",
-    "rollup": "^3.8.1",
-    "typescript": "^4.9.4",
-    "vite": "^4.0.3",
+    "esbuild": "^0.17.12",
+    "rollup": "^3.19.1",
+    "typescript": "^5.0.2",
+    "vite": "^4.2.0",
     "vite-plugin-utils": "^0.4.0",
-    "vitest": "^0.28.3"
+    "vitest": "^0.29.3"
   },
   "files": [
     "types",
