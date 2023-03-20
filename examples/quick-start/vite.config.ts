@@ -11,16 +11,6 @@ export default defineConfig({
     renderer({
       // Enables use of Node.js API in the Renderer-process
       nodeIntegration: true,
-      // Like Vite's pre bundling
-      optimizeDeps: {
-        include: [
-          'serialport',     // cjs(C++)
-          'electron-store', // cjs
-          'execa',          // esm
-          'got',            // esm
-          'node-fetch',     // esm
-        ],
-      },
     }),
   ],
   build: {
