@@ -21,7 +21,7 @@ export interface optimizerOptions {
   /**
    * Explicitly tell the Pre-Bundling how to work, when value is `false` Vite's default Pre-Bundling will be used.
    */
-  preBundle?: { [module: string]: 'commonjs' | 'module' | false }
+  modules?: { [module: string]: 'commonjs' | 'module' | false }
 }
 
 export default function optimizer(options: optimizerOptions, nodeIntegration: boolean): VitePlugin {
@@ -66,7 +66,7 @@ export default function optimizer(options: optimizerOptions, nodeIntegration: bo
 }
 
 export function esbuildPlugin(options: optimizerOptions): EsbuildPlugin {
-  const { buildOptions, preBundle = {} } = options
+  const { buildOptions, modules = {} } = options
 
   return {
     name: 'vite-plugin-target:optimizer:esbuild',
@@ -79,7 +79,7 @@ export function esbuildPlugin(options: optimizerOptions): EsbuildPlugin {
           return
         }
 
-        const userType = preBundle[id]
+        const userType = modules[id]
         if (userType === false) {
           // Use Vite's default Pre-Bundling
           return
