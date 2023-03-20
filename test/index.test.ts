@@ -11,7 +11,7 @@ describe('src/index.ts', () => {
     const names = [
       'vite-plugin-electron-renderer:builtins',
       'vite-plugin-electron-renderer:build-config',
-      'vite-plugin-electron-renderer:optimizer',
+      'vite-plugin-electron-renderer:pre-bundle',
       'vite-plugin-electron-renderer:cjs-shim',
     ]
     
@@ -23,7 +23,7 @@ describe('src/index.ts', () => {
     const names = [
       'vite-plugin-electron-renderer:builtins',
       'vite-plugin-electron-renderer:build-config',
-      'vite-plugin-electron-renderer:optimizer',
+      'vite-plugin-electron-renderer:pre-bundle',
     ]
 
     expect(plugins.map(p => p.name)).toEqual(names)
