@@ -1,16 +1,10 @@
-import { builtinModules } from 'node:module'
 import type {
   Alias,
   Plugin,
   UserConfig,
 } from 'vite'
 import type { ExternalOption, RollupOptions } from 'rollup'
-
-export const builtins = [
-  'electron',
-  ...builtinModules.filter(m => !m.startsWith('_')),
-  ...builtinModules.filter(m => !m.startsWith('_')).map(mod => `node:${mod}`),
-]
+import { electronBuiltins } from './utils'
 
 export default function buildConfig(nodeIntegration?: boolean): Plugin[] {
   return [
@@ -23,7 +17,7 @@ export default function buildConfig(nodeIntegration?: boolean): Plugin[] {
             find: 'electron',
             replacement: 'vite-plugin-electron-renderer/builtins/electron',
           },
-          ...(nodeIntegration ? builtins
+          ...(nodeIntegration ? electronBuiltins
             .filter(m => m !== 'electron')
             .filter(m => !m.startsWith('node:'))
             .map<Alias>(m => ({
@@ -36,7 +30,7 @@ export default function buildConfig(nodeIntegration?: boolean): Plugin[] {
         modifyOptimizeDeps(
           config,
           nodeIntegration
-            ? builtins.concat(aliases.map(({ replacement }) => replacement))
+            ? electronBuiltins.concat(aliases.map(({ replacement }) => replacement))
             : [
               'electron',
               'vite-plugin-electron-renderer/builtins/electron',
@@ -81,17 +75,17 @@ function withExternal(external?: ExternalOption) {
     external instanceof RegExp
   ) {
     // @ts-ignore
-    external = builtins.concat(external)
+    external = electronBuiltins.concat(external)
   } else if (typeof external === 'function') {
     const original = external
     external = function externalFn(source, importer, isResolved) {
-      if (builtins.includes(source)) {
+      if (electronBuiltins.includes(source)) {
         return true
       }
       return original(source, importer, isResolved)
     }
   } else {
-    external = builtins
+    external = electronBuiltins
   }
   return external
 }
@@ -108,13 +102,13 @@ function setOutputFormat(rollupOptions: RollupOptions) {
   }
 }
 
-export function modifyOptimizeDeps(config: UserConfig, exclude: string[]) {
+function modifyOptimizeDeps(config: UserConfig, exclude: string[]) {
   config.optimizeDeps ??= {}
   config.optimizeDeps.exclude ??= []
   config.optimizeDeps.exclude.push(...exclude.filter(e => !config.optimizeDeps?.exclude?.includes(e)))
 }
 
-export function modifyAlias(config: UserConfig, aliases: Alias[]) {
+function modifyAlias(config: UserConfig, aliases: Alias[]) {
   config.resolve ??= {}
   config.resolve.alias ??= []
   if (Object.prototype.toString.call(config.resolve.alias) === '[object Object]') {

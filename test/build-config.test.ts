@@ -13,7 +13,8 @@ import {
   expect,
   it,
 } from 'vitest'
-import buildConfig, { builtins } from '../src/build-config'
+import buildConfig from '../src/build-config'
+import { electronBuiltins } from '../src/utils'
 
 describe('src/build-config.ts', () => {
   it('buildConfig.external', async () => {
@@ -78,7 +79,7 @@ describe('src/build-config.ts', () => {
         replacement: 'vite-plugin-electron-renderer/builtins/electron',
       },
     ]
-    const aliasesNodeTrue: Alias[] = aliasesNodeFalse.concat(builtins
+    const aliasesNodeTrue: Alias[] = aliasesNodeFalse.concat(electronBuiltins
       .filter(m => m !== 'electron')
       .filter(m => !m.startsWith('node:'))
       .map<Alias>(m => ({
@@ -95,7 +96,7 @@ describe('src/build-config.ts', () => {
       'electron',
       'vite-plugin-electron-renderer/builtins/electron',
     ])
-    expect(resolvedNodeTrue.optimizeDeps.exclude).toEqual(builtins.concat(aliasesNodeTrue.map(a => a.replacement)))
+    expect(resolvedNodeTrue.optimizeDeps.exclude).toEqual(electronBuiltins.concat(aliasesNodeTrue.map(a => a.replacement)))
   })
 })
 

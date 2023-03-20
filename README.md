@@ -75,43 +75,6 @@ readFile('foo.txt')
 ipcRenderer.on('event-name', () => {/* something */})
 ```
 
-3. When using third-party Node.js modules, keep the following points in mind.
-
-  - Most third-party modules should be Pre-Bundling, unless it is a pure ESM module
-  - Pre-Bundling replaces Vite's built-in [Pre-Bundling](https://vitejs.dev/guide/dep-pre-bundling.html#dependency-pre-bundling), which is intended for the Renderer process
-  - Pre-Bundling is always a no-brainer, but it sacrifices some performance, so use it correctly
-  - The C/C++ modules must be in dependencies, it cannot be built correctly by Vite
-
-```js
-import renderer from 'vite-plugin-electron-renderer'
-
-export default {
-  plugins: [
-    renderer({
-      // Enables use of Node.js API in the Renderer-process
-      nodeIntegration: true,
-      // Like Vite's pre bundling
-      optimizeDeps: {
-        // Only vite serve
-        include: [
-          'serialport',     // cjs(C++)
-          'electron-store', // cjs
-          'node-fetch',     // esm
-        ],
-      },
-    }),
-  ],
-  build: {
-    rollupOptions: {
-      // Only vite build
-      external: [
-        'serialport',
-      ],
-    },
-  },
-}
-```
-
 ## API *(Define)*
 
 `renderer(options: RendererOptions)`
@@ -123,23 +86,14 @@ export interface RendererOptions {
    */
   nodeIntegration?: boolean
   /**
-   * If the npm-package you are using is a Node.js package, then you need to Pre-Bundling it.
-   * @see https://vitejs.dev/guide/dep-pre-bundling.html
+   * Pre-Bundling modules for Electron Renderer process.
    */
-  optimizeDeps?: {
-    /**
-     * Explicitly specify which modules need to be Pre-Bundling, as they need to be inserted in advance into Vite's built-in Pre-Bundling(optimizeDeps.exclude).
-     */
-    include?: (string | {
-      name: string
-      /**
-       * Explicitly specify the module type
-       * - `commonjs` - Only the ESM code snippet is wrapped
-       * - `module` - First build the code as cjs via esbuild, then wrap the ESM code snippet
-       */
-      type?: 'commonjs' | 'module'
-    })[]
+  optimizer?: {
     buildOptions?: import('esbuild').BuildOptions
+    /**
+     * Explicitly tell the Pre-Bundling how to work, when value is `false` Vite's default Pre-Bundling will be used.
+     */
+    modules?: { [module: string]: 'commonjs' | 'module' | false }
   }
 }
 ```
@@ -188,25 +142,20 @@ const { ipcRenderer } = require('electron')
 
 ## Dependency Pre-Bundling
 
-> &gt;=v0.10.2
+**In general**. Vite will pre-bundle all third-party modules in a Web-based usage format, but it can not adapt to Electron Renderer process especially C/C++ modules. So we must be make a little changes for this.  
+When a module detected as a `cjs` module. it will be pre-bundle like the following.
 
-When you run vite for the first time, you may notice this message:
+```js
+const lib = require("cjs-module");
 
-```log
-$ vite
-Pre-bundling: serialport
-Pre-bundling: electron-store
-Pre-bundling: node-fetch
+export const member = lib.member;
+export default (lib.default || lib);
 ```
 
-#### The Why
-
-**In general**, Vite may not correctly build Node.js packages, especially Node.js C/C++ native modules, but Vite can load them as external packages.  
-Unless you know how to properly build them with Vite.  
-[See example](https://github.com/electron-vite/vite-plugin-electron-renderer/blob/v0.10.3/examples/quick-start/vite.config.ts#L14-L23)
+[See source code](https://github.com/electron-vite/vite-plugin-electron-renderer/blob/v0.13.0/src/optimizer.ts#L139-L142)
 
 **By the way**. If an npm package is a pure ESM format package, and the packages it depends on are also in ESM format, then put it in `optimizeDeps.exclude` and it will work normally.  
-[See an explanation of it](https://github.com/electron-vite/vite-plugin-electron-renderer/blob/v0.10.3/examples/quick-start/vite.config.ts#L33-L36)
+[See the explanation](https://github.com/electron-vite/vite-plugin-electron-renderer/blob/v0.10.3/examples/quick-start/vite.config.ts#L33-L36)
 
 ## `dependencies` vs `devDependencies`
 

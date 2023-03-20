@@ -1,291 +1,169 @@
 import fs from 'node:fs'
 import path from 'node:path'
-import crypto from 'node:crypto'
-import { createRequire, builtinModules } from 'node:module'
-import type { Alias, Plugin } from 'vite'
+import { createRequire } from 'node:module'
+import type { Plugin as VitePlugin } from 'vite'
+import {
+  type Plugin as EsbuildPlugin,
+} from 'esbuild'
 import libEsm from 'lib-esm'
 import { COLOURS, node_modules as find_node_modules } from 'vite-plugin-utils/function'
-import {
-  builtins,
-  modifyAlias,
-  modifyOptimizeDeps,
-} from './build-config'
-
-export type DepOptimizationOptions = {
-  /**
-   * Explicitly specify which modules need to be Pre-Bundling, as they need to be inserted in advance into Vite's built-in Pre-Bundling(optimizeDeps.exclude).
-   */
-  include?: (string | {
-    name: string
-    /**
-     * Explicitly specify the module type
-     * - `commonjs` - Only the ESM code snippet is wrapped
-     * - `module` - First build the code as cjs via esbuild, then wrap the ESM code snippet
-     */
-    type?: 'commonjs' | 'module'
-  })[]
-  buildOptions?: import('esbuild').BuildOptions
-  // TODO: consider support webpack 🤔
-  // webpack?: import('webpack').Configuration
-}
+import { electronBuiltins, ensureDir } from './utils'
 
 const cjs_require = createRequire(import.meta.url)
+const preBundleCjs = 'pre-bundle-cjs'
+const preBundleEsm = 'pre-bundle-esm'
 const CACHE_DIR = '.vite-electron-renderer'
-
 let node_modules_path: string
-let cache: Cache
+let cache_dir: string
 
-export default function optimizer(options: DepOptimizationOptions = {}): Plugin {
-  const { include, buildOptions } = options
+export interface optimizerOptions {
+  buildOptions?: import('esbuild').BuildOptions
+  /**
+   * Explicitly tell the Pre-Bundling how to work, when value is `false` Vite's default Pre-Bundling will be used.
+   */
+  modules?: { [module: string]: 'commonjs' | 'module' | false }
+}
 
+export default function optimizer(options: optimizerOptions, nodeIntegration: boolean): VitePlugin {
   return {
-    name: 'vite-plugin-electron-renderer:optimizer',
-    // At `vite build` phase, Node.js npm-pkgs can be built correctly by Vite.
-    // TODO: consider support `vite build` phase, like Vite v3.0.0
-    apply: 'serve',
-    async config(config) {
-      if (!include?.length) return
-
+    name: 'vite-plugin-electron-renderer:pre-bundle',
+    config(config) {
       node_modules_path = find_node_modules(config.root ? path.resolve(config.root) : process.cwd())[0]
-      cache = new Cache(path.join(node_modules_path, CACHE_DIR))
+      cache_dir = path.join(node_modules_path, CACHE_DIR)
 
-      const deps: {
-        esm?: string
-        cjs?: string
-        filename?: string
-      }[] = []
-      const aliases: Alias[] = []
-      const optimizeDepsExclude = []
+      config.optimizeDeps ??= {}
+      config.optimizeDeps.esbuildOptions ??= {}
+      config.optimizeDeps.esbuildOptions.plugins ??= []
+      config.optimizeDeps.esbuildOptions.plugins.push(esbuildPlugin(options))
 
-      for (const item of include) {
-        let name: string
-        let type: string | undefined
-        if (typeof item === 'string') {
-          name = item
-        } else {
-          name = item.name
-          type = item.type
-        }
-        if (type === 'module') {
-          deps.push({ esm: name })
-          continue
-        }
-        if (type === 'commonjs') {
-          deps.push({ cjs: name })
-          continue
-        }
-        if (builtins.includes(name)) {
-          // Process in `vite-plugin-electron-renderer:builtins` plugin
-          continue
-        }
+      const metadata: {
+        '// nodeIntegration': string
+        nodeIntegration?: boolean
+        timestamp: number
+      } = {
+        '// nodeIntegration': 'Record the last nodeIntegration value compared to the new value and decide whether to clear the `.vite` directory cache.',
+        nodeIntegration: undefined,
+        timestamp: Date.now(),
+      }
+      const metafile = path.join(cache_dir, '_metadata.json')
 
-        const pkgJson = path.join(node_modules_path, name, 'package.json')
-        if (fs.existsSync(pkgJson)) {
-          // bare module
-          const pkg = cjs_require(pkgJson)
-          if (pkg.type === 'module') {
-            deps.push({ esm: name })
-            continue
-          }
-          deps.push({ cjs: name })
-          continue
-        }
-
-        const pkgPath = path.join(node_modules_path, name)
+      if (fs.existsSync(metafile)) {
         try {
-          // dirname or filename 🤔
-          // `foo/bar` or `foo/bar/index.js`
-          const filename = cjs_require.resolve(pkgPath)
-          if (path.extname(filename) === '.mjs') {
-            deps.push({ esm: name, filename })
-            continue
-          }
-          deps.push({ cjs: name, filename })
-          continue
-        } catch (error) {
-          console.log(COLOURS.red('Can not resolve path:'), pkgPath)
-        }
+          Object.assign(metadata, JSON.parse(fs.readFileSync(metafile, 'utf8')))
+        } catch { }
       }
-
-      for (const dep of deps) {
-        if (!dep.filename) {
-          const module = (dep.cjs || dep.esm) as string
-          try {
-            // TODO: resolve(, [paths condition])
-            dep.filename = cjs_require.resolve(module)
-          } catch (error) {
-            console.log(COLOURS.red('Can not resolve module:'), module)
-          }
-        }
-        if (!dep.filename) {
-          continue
-        }
-
-        if (dep.cjs) {
-          cjsBundling({
-            name: dep.cjs,
-            require: dep.cjs,
-            requireId: dep.filename,
-          })
-        } else if (dep.esm) {
-          esmBundling({
-            name: dep.esm,
-            entry: dep.filename,
-            buildOptions,
-          })
-        }
-
-        const name = dep.cjs || dep.esm
-        if (name) {
-          optimizeDepsExclude.push(name)
-          const { destname } = dest(name)
-          aliases.push({ find: name, replacement: destname })
-        }
+      if (metadata.nodeIntegration !== nodeIntegration) {
+        fs.rmSync(path.join(node_modules_path, '.vite'), { recursive: true, force: true })
+        ensureDir(cache_dir)
+        Object.assign(metadata, {
+          nodeIntegration,
+          timestamp: Date.now(),
+        })
+        fs.writeFileSync(metafile, JSON.stringify(metadata, null, 2))
       }
-
-      modifyAlias(config, aliases)
-      modifyOptimizeDeps(config, optimizeDepsExclude)
     },
   }
 }
 
-function cjsBundling(args: {
-  name: string
-  require: string
-  requireId: string
-}) {
-  const { name, require, requireId } = args
-  const { destpath, destname } = dest(name)
-  if (cache.checkHash(destname)) return
+export function esbuildPlugin(options: optimizerOptions): EsbuildPlugin {
+  const { buildOptions, modules = {} } = options
 
-  const { exports } = libEsm({ exports: Object.keys(cjs_require(requireId)) })
-  const code = `const _M_ = require("${require}");\n${exports}`
-
-  !fs.existsSync(destpath) && fs.mkdirSync(destpath, { recursive: true })
-  fs.writeFileSync(destname, code)
-  cache.writeCache(destname)
-  console.log(COLOURS.cyan('Pre-bundling:'), COLOURS.yellow(name))
-}
-
-async function esmBundling(args: {
-  name: string,
-  entry: string,
-  buildOptions?: import('esbuild').BuildOptions,
-}) {
-  const { name, entry, buildOptions } = args
-  const { name_cjs, destname_cjs } = dest(name)
-  if (cache.checkHash(destname_cjs)) return
-
-  let esbuild: typeof import('esbuild')
-  try {
-    esbuild = await import('esbuild')
-  } catch {
-    throw new Error('[Pre-Bundling] dependency "esbuild". Did you install it?')
-  }
-
-  return esbuild.build({
-    entryPoints: [entry],
-    outfile: destname_cjs,
-    target: 'node14',
-    format: 'cjs',
-    bundle: true,
-    sourcemap: true,
-    external: [
-      ...builtinModules,
-      ...builtinModules.map(mod => `node:${mod}`),
-    ],
-    ...buildOptions,
-  }).then(result => {
-    if (!result.errors.length) {
-      cache.writeCache(destname_cjs)
-      cjsBundling({
-        name,
-        require: `${CACHE_DIR}/${name}/${name_cjs}`,
-        requireId: destname_cjs,
-      })
-    }
-    return result
-  })
-}
-
-function dest(name: string) {
-  const destpath = path.join(node_modules_path, CACHE_DIR, name)
-  const name_js = 'index.js'
-  const name_cjs = 'index.cjs'
-  !fs.existsSync(destpath) && fs.mkdirSync(destpath, { recursive: true })
   return {
-    destpath,
-    name_js,
-    name_cjs,
-    destname: path.join(destpath, name_js),
-    destname_cjs: path.join(destpath, name_cjs),
-  }
-}
+    name: 'vite-plugin-target:optimizer:esbuild',
+    setup(build) {
+      build.onResolve({
+        filter: /^[\w@]/, // bare import
+      }, async ({ path: id }) => {
+        if (electronBuiltins.includes(id)) {
+          // Builtin modules handled in 'build-config'
+          return
+        }
 
-// ----------------------------------------
+        const userType = modules[id]
+        if (userType === false) {
+          // Use Vite's default Pre-Bundling
+          return
+        } else if (userType === 'commonjs') {
+          return {
+            path: id,
+            namespace: preBundleCjs,
+          }
+        } else if (userType === 'module') {
+          return {
+            path: id,
+            namespace: preBundleEsm,
+          }
+        }
 
-export interface ICache {
-  timestamp?: number
-  optimized?: {
-    [filename: string]: {
-      hash: string
-    }
-  }
-}
+        // ---- Try to detect what type a module is ----
 
-class Cache {
-  static getHash(filename: string) {
-    return crypto.createHash('md5').update(fs.readFileSync(filename)).digest('hex')
-  }
+        let isCjsModule!: boolean
+        // Assume a bare module
+        const packageJson = path.join(node_modules_path, id, 'package.json')
+        // Assume a dirname or filename -> e.g. `foo/bar` or `foo/bar/index.js` 🤔
+        const modulePath = path.join(node_modules_path, id)
 
-  constructor(
-    public root: string,
-    public cacheFile = path.join(root, '_metadata.json'),
-  ) {
-    // TODO: cleanup meta
-  }
+        if (fs.existsSync(packageJson)) {
+          const pkg = cjs_require(packageJson)
+          if (pkg.type !== 'module') {
+            isCjsModule = true
+          }
+        } else {
+          try {
+            const filename = cjs_require.resolve(modulePath)
+            if (path.extname(filename) !== '.mjs') {
+              isCjsModule = true
+            }
+          } catch (error) {
+            console.log(COLOURS.red('Can not resolve path:'), modulePath)
+          }
+        }
 
-  checkHash(filename: string) {
-    if (!fs.existsSync(filename)) {
-      return false
-    }
-    let hash: string
-    try {
-      hash = Cache.getHash(filename)
-    } catch {
-      return false
-    }
-    const { optimized = {} } = this.readCache()
-    for (const [file, meta] of Object.entries(optimized)) {
-      if (filename === file && hash === meta.hash) {
-        return true
-      }
-    }
-    return false
-  }
+        return {
+          path: id,
+          namespace: isCjsModule ? preBundleCjs : preBundleEsm,
+        }
+      })
 
-  readCache(): ICache {
-    try {
-      return JSON.parse(fs.readFileSync(this.cacheFile, 'utf8'))
-    } catch {
-      return {}
-    }
-  }
+      build.onLoad({
+        filter: /.*/,
+        namespace: preBundleCjs,
+      }, async ({ path: id }) => {
+        const { exports } = libEsm({ exports: Object.getOwnPropertyNames(cjs_require(id)) })
 
-  writeCache(filename: string) {
-    if (!fs.existsSync(filename)) {
-      throw new Error(`${filename} is not exist!`)
-    }
-    const { optimized = {} } = this.readCache()
-    const newCache: ICache = {
-      timestamp: Date.now(),
-      optimized: {
-        ...optimized,
-        [filename]: {
-          hash: Cache.getHash(filename),
-        },
-      },
-    }
-    fs.writeFileSync(this.cacheFile, JSON.stringify(newCache, null, 2))
+        return {
+          contents: `
+// Use "__cjs_require" avoid esbuild parse "require"
+const __cjs_require = require;
+
+// If a module is a CommonJs, use the "require" loading it can bring better performance.
+// Especially it is a C/C++ module, this can avoid a lot of trouble.
+const _M_ = __cjs_require("${id}");
+${exports}
+  `.trim(),
+        }
+      })
+
+      build.onLoad({
+        filter: /.*/,
+        namespace: preBundleEsm,
+      }, async ({ path: id }) => {
+        const outfile = path.join(cache_dir, id, 'index.js')
+        ensureDir(path.dirname(outfile))
+
+        await build.esbuild.build({
+          entryPoints: [id],
+          outfile,
+          format: 'esm',
+          target: 'node14',
+          bundle: true,
+          metafile: true,
+          external: electronBuiltins,
+          ...buildOptions,
+        })
+
+        return { contents: fs.readFileSync(outfile, 'utf8') }
+      })
+    },
   }
 }
