@@ -27,6 +27,7 @@ export default function buildConfig(nodeIntegration?: boolean): Plugin[] {
         ]
 
         modifyAlias(config, aliases)
+        /*
         modifyOptimizeDeps(
           config,
           nodeIntegration
@@ -36,6 +37,7 @@ export default function buildConfig(nodeIntegration?: boolean): Plugin[] {
               'vite-plugin-electron-renderer/builtins/electron',
             ],
         )
+        */
       },
     },
     {
@@ -102,6 +104,10 @@ function setOutputFormat(rollupOptions: RollupOptions) {
   }
 }
 
+/**
+ * @deprecated better implements in v0.13.1
+ * @see https://github.com/electron-vite/vite-plugin-electron-renderer/blob/v0.13.1/src/optimizer.ts#L81-L87
+ */
 function modifyOptimizeDeps(config: UserConfig, exclude: string[]) {
   config.optimizeDeps ??= {}
   config.optimizeDeps.exclude ??= []
