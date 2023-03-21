@@ -10,7 +10,7 @@ import { node_modules as find_node_modules } from 'vite-plugin-utils/function'
 import { electronBuiltins, ensureDir } from './utils'
 
 const cjs_require = createRequire(import.meta.url)
-const electronNpmCjsNamespace = 'electron:npm-cjs'
+const electronNpmPkgCjsNamespace = 'electron:npm-pkg-cjs'
 const bareImport = /^[\w@].*/
 const CACHE_DIR = '.vite-electron-renderer'
 let node_modules_path: string
@@ -104,6 +104,10 @@ export function esbuildPlugin(options: optimizerOptions): EsbuildPlugin {
           // https://github.com/vitejs/vite/blob/v4.2.0/packages/vite/src/node/optimizer/esbuildDepPlugin.ts#L15-L20
           return
         }
+        if (id.startsWith('virtual-module:')) {
+          // https://github.com/vitejs/vite/blob/v4.2.0/packages/vite/src/node/optimizer/scan.ts#L436-L438
+          return
+        }
 
         // ---- Try to detect what type a module is ----
         let moduleType: 'commonjs' | 'module' | undefined
@@ -130,6 +134,7 @@ export function esbuildPlugin(options: optimizerOptions): EsbuildPlugin {
               }
             }
           }
+          moduleType ??= 'commonjs'
         }
 
         const userType = await resolve?.(args)
@@ -141,21 +146,18 @@ export function esbuildPlugin(options: optimizerOptions): EsbuildPlugin {
           moduleType = userType.type
         }
 
-        // Assign default value
-        moduleType ??= 'commonjs'
-
         // Only `cjs` modules, especially C/C++ npm-pkg, `es` modules will be use Vite's default Pre-Bundling
         if (moduleType === 'commonjs') {
           return {
             path: id,
-            namespace: electronNpmCjsNamespace,
+            namespace: electronNpmPkgCjsNamespace,
           }
         }
       })
 
       build.onLoad({
         filter: /.*/,
-        namespace: electronNpmCjsNamespace,
+        namespace: electronNpmPkgCjsNamespace,
       }, async ({ path: id }) => {
         const { exports } = libEsm({ exports: Object.getOwnPropertyNames(cjs_require(id)) })
 
@@ -169,7 +171,7 @@ const __cjs_require = require;
 // Especially it is a C/C++ module, this can avoid a lot of trouble.
 const _M_ = __cjs_require("${id}");
 ${exports}
-  `.trim(),
+`.trim(),
         }
       })
     },
