@@ -1,3 +1,7 @@
+## 0.13.3 (2023-03-21)
+
+- de584cc fix: filter `virtual-module:`
+
 ## 0.13.2 (2023-03-21)
 
 - 7cc1abd refactor: better module type detect
