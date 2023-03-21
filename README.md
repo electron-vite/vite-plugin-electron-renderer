@@ -85,16 +85,6 @@ export interface RendererOptions {
    * @default false
    */
   nodeIntegration?: boolean
-  /**
-   * Pre-Bundling modules for Electron Renderer process.
-   */
-  optimizer?: {
-    buildOptions?: import('esbuild').BuildOptions
-    /**
-     * Explicitly tell the Pre-Bundling how to work, when value is `false` Vite's default Pre-Bundling will be used.
-     */
-    modules?: { [module: string]: 'commonjs' | 'module' | false }
-  }
 }
 ```
 

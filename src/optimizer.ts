@@ -6,22 +6,23 @@ import {
   type Plugin as EsbuildPlugin,
 } from 'esbuild'
 import libEsm from 'lib-esm'
-import { COLOURS, node_modules as find_node_modules } from 'vite-plugin-utils/function'
+import { node_modules as find_node_modules } from 'vite-plugin-utils/function'
 import { electronBuiltins, ensureDir } from './utils'
 
 const cjs_require = createRequire(import.meta.url)
-const preBundleCjs = 'pre-bundle-cjs'
-const preBundleEsm = 'pre-bundle-esm'
+const electronNpmCjsNamespace = 'electron:npm-cjs'
+const bareImport = /^[\w@].*/
 const CACHE_DIR = '.vite-electron-renderer'
 let node_modules_path: string
 let cache_dir: string
 
 export interface optimizerOptions {
-  buildOptions?: import('esbuild').BuildOptions
   /**
-   * Explicitly tell the Pre-Bundling how to work, when value is `false` Vite's default Pre-Bundling will be used.
+   * Explicitly tell the Pre-Bundling how to work.
+   * 
+   * - `false` Vite's default Pre-Bundling will be used.
    */
-  modules?: { [module: string]: 'commonjs' | 'module' | false }
+  resolve?: (args: import('esbuild').OnResolveArgs) => 'commonjs' | 'module' | false | null | undefined | Promise<'commonjs' | 'module' | false | null | undefined>
 }
 
 export default function optimizer(options: optimizerOptions, nodeIntegration: boolean): VitePlugin {
@@ -33,6 +34,7 @@ export default function optimizer(options: optimizerOptions, nodeIntegration: bo
 
       config.optimizeDeps ??= {}
       config.optimizeDeps.esbuildOptions ??= {}
+      config.optimizeDeps.esbuildOptions.platform ??= 'node'
       config.optimizeDeps.esbuildOptions.plugins ??= []
       config.optimizeDeps.esbuildOptions.plugins.push(esbuildPlugin(options))
 
@@ -66,74 +68,78 @@ export default function optimizer(options: optimizerOptions, nodeIntegration: bo
 }
 
 export function esbuildPlugin(options: optimizerOptions): EsbuildPlugin {
-  const { buildOptions, modules = {} } = options
+  const { resolve } = options
 
   return {
     name: 'vite-plugin-target:optimizer:esbuild',
     setup(build) {
-      build.onResolve({
-        filter: /^[\w@]/, // bare import
-      }, async ({ path: id }) => {
+      // https://github.com/vitejs/vite/blob/v4.2.0/packages/vite/src/node/optimizer/esbuildDepPlugin.ts#L277-L279
+      const escape = (text: string) =>
+        `^${text.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&')}$`
+      const filter = new RegExp(electronBuiltins.map(escape).join('|'))
+
+      // Electron builtin modules
+      build.onResolve({ filter }, args => {
+        return {
+          path: args.path,
+          external: true,
+        }
+      })
+
+      // Third party npm-pkg
+      build.onResolve({ filter: bareImport }, async args => {
+        const {
+          path: id,
+          namespace,
+          importer,
+        } = args
         if (electronBuiltins.includes(id)) {
-          // Builtin modules handled in 'build-config'
+          // Builtin modules handled in './build-config.ts'
           return
         }
-
-        const userType = modules[id]
-        if (userType === false) {
-          // Use Vite's default Pre-Bundling
+        if (importer.includes('node_modules')) {
           return
-        } else if (userType === 'commonjs') {
-          return {
-            path: id,
-            namespace: preBundleCjs,
-          }
-        } else if (userType === 'module') {
-          return {
-            path: id,
-            namespace: preBundleEsm,
-          }
+        }
+        if (id.startsWith('vite-') || namespace.startsWith('vite:')) {
+          // https://github.com/vitejs/vite/blob/v4.2.0/packages/vite/src/node/optimizer/esbuildDepPlugin.ts#L15-L20
+          return
         }
 
         // ---- Try to detect what type a module is ----
-
-        let isCjsModule!: boolean
-        // Assume a bare module
+        let moduleType: 'commonjs' | 'module' | undefined
         const packageJson = path.join(node_modules_path, id, 'package.json')
-        // Assume a dirname or filename -> e.g. `foo/bar` or `foo/bar/index.js` 🤔
-        const modulePath = path.join(node_modules_path, id)
-
         if (fs.existsSync(packageJson)) {
-          const pkg = cjs_require(packageJson)
-          if (pkg.type !== 'module') {
-            isCjsModule = true
-          }
-        } else {
-          try {
-            const filename = cjs_require.resolve(modulePath)
-            if (path.extname(filename) !== '.mjs') {
-              isCjsModule = true
-            }
-          } catch (error) {
-            console.log(COLOURS.red('Can not resolve path:'), modulePath)
-          }
+          moduleType = cjs_require(packageJson).type === 'module' ? 'module' : 'commonjs'
         }
 
-        return {
-          path: id,
-          namespace: isCjsModule ? preBundleCjs : preBundleEsm,
+        const userType = await resolve?.(args)
+        if (userType === false) {
+          // Use Vite's default Pre-Bundling
+          return
+        }
+        if (userType === 'commonjs' || userType === 'module') {
+          moduleType = userType
+        }
+
+        // Only `cjs` modules, especially C/C++ npm-pkg, `es` modules will be use Vite's default Pre-Bundling
+        if (moduleType === 'commonjs') {
+          return {
+            path: id,
+            namespace: electronNpmCjsNamespace,
+          }
         }
       })
 
       build.onLoad({
         filter: /.*/,
-        namespace: preBundleCjs,
+        namespace: electronNpmCjsNamespace,
       }, async ({ path: id }) => {
         const { exports } = libEsm({ exports: Object.getOwnPropertyNames(cjs_require(id)) })
 
         return {
           contents: `
 // Use "__cjs_require" avoid esbuild parse "require"
+// TODO: better implements
 const __cjs_require = require;
 
 // If a module is a CommonJs, use the "require" loading it can bring better performance.
@@ -142,27 +148,6 @@ const _M_ = __cjs_require("${id}");
 ${exports}
   `.trim(),
         }
-      })
-
-      build.onLoad({
-        filter: /.*/,
-        namespace: preBundleEsm,
-      }, async ({ path: id }) => {
-        const outfile = path.join(cache_dir, id, 'index.js')
-        ensureDir(path.dirname(outfile))
-
-        await build.esbuild.build({
-          entryPoints: [id],
-          outfile,
-          format: 'esm',
-          target: 'node14',
-          bundle: true,
-          metafile: true,
-          external: electronBuiltins,
-          ...buildOptions,
-        })
-
-        return { contents: fs.readFileSync(outfile, 'utf8') }
       })
     },
   }
