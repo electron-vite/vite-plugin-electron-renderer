@@ -22,12 +22,12 @@ export interface optimizerOptions {
    * 
    * - `false` Vite's default Pre-Bundling will be used.
    */
-  resolve?: (args: import('esbuild').OnResolveArgs) => 'commonjs' | 'module' | false | null | undefined | Promise<'commonjs' | 'module' | false | null | undefined>
+  resolve?: (args: import('esbuild').OnResolveArgs) => { type: 'commonjs' | 'module' } | false | void | Promise<{ type: 'commonjs' | 'module' } | false | void>
 }
 
 export default function optimizer(options: optimizerOptions, nodeIntegration: boolean): VitePlugin {
   return {
-    name: 'vite-plugin-electron-renderer:pre-bundle',
+    name: 'vite-plugin-electron-renderer:optimizer',
     config(config) {
       node_modules_path = find_node_modules(config.root ? path.resolve(config.root) : process.cwd())[0]
       cache_dir = path.join(node_modules_path, CACHE_DIR)
@@ -109,7 +109,27 @@ export function esbuildPlugin(options: optimizerOptions): EsbuildPlugin {
         let moduleType: 'commonjs' | 'module' | undefined
         const packageJson = path.join(node_modules_path, id, 'package.json')
         if (fs.existsSync(packageJson)) {
-          moduleType = cjs_require(packageJson).type === 'module' ? 'module' : 'commonjs'
+          const pkg = cjs_require(packageJson)
+          if (pkg.type) {
+            // { "type": "module" }
+            moduleType = pkg.type === 'module' ? 'module' : 'commonjs'
+          } else if (pkg.module) {
+            // { "module": "main.mjs" }
+            moduleType = 'module'
+          } else if (pkg.exports) {
+            if (pkg.exports.import) {
+              // { "exports":  { "import": "main.mjs" } }
+              moduleType = 'module'
+            } else {
+              for (const _export of Object.values<Record<string, string>>(pkg.exports)) {
+                if (_export.import) {
+                  // { "exports":  { ".": { "import": "main.mjs" } } }
+                  moduleType = 'module'
+                  break
+                }
+              }
+            }
+          }
         }
 
         const userType = await resolve?.(args)
@@ -117,9 +137,12 @@ export function esbuildPlugin(options: optimizerOptions): EsbuildPlugin {
           // Use Vite's default Pre-Bundling
           return
         }
-        if (userType === 'commonjs' || userType === 'module') {
-          moduleType = userType
+        if (userType && typeof userType === 'object') {
+          moduleType = userType.type
         }
+
+        // Assign default value
+        moduleType ??= 'commonjs'
 
         // Only `cjs` modules, especially C/C++ npm-pkg, `es` modules will be use Vite's default Pre-Bundling
         if (moduleType === 'commonjs') {
