@@ -1,3 +1,7 @@
+## 0.13.1 (2023-03-21)
+
+893e361 refactor!: improve Pre-Bundling #35
+
 ## 0.13.0 (2023-03-20)
 
 #### Break!
