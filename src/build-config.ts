@@ -27,17 +27,6 @@ export default function buildConfig(nodeIntegration?: boolean): Plugin[] {
         ]
 
         modifyAlias(config, aliases)
-        /*
-        modifyOptimizeDeps(
-          config,
-          nodeIntegration
-            ? electronBuiltins.concat(aliases.map(({ replacement }) => replacement))
-            : [
-              'electron',
-              'vite-plugin-electron-renderer/builtins/electron',
-            ],
-        )
-        */
       },
     },
     {
@@ -102,16 +91,6 @@ function setOutputFormat(rollupOptions: RollupOptions) {
   } else {
     rollupOptions.output.format ??= 'cjs'
   }
-}
-
-/**
- * @deprecated better implements in v0.13.1
- * @see https://github.com/electron-vite/vite-plugin-electron-renderer/blob/v0.13.1/src/optimizer.ts#L81-L87
- */
-function modifyOptimizeDeps(config: UserConfig, exclude: string[]) {
-  config.optimizeDeps ??= {}
-  config.optimizeDeps.exclude ??= []
-  config.optimizeDeps.exclude.push(...exclude.filter(e => !config.optimizeDeps?.exclude?.includes(e)))
 }
 
 function modifyAlias(config: UserConfig, aliases: Alias[]) {

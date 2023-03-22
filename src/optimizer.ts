@@ -1,20 +1,12 @@
-import fs from 'node:fs'
-import path from 'node:path'
 import { createRequire } from 'node:module'
 import type { Plugin as VitePlugin } from 'vite'
-import {
-  type Plugin as EsbuildPlugin,
-} from 'esbuild'
+import type { Plugin as EsbuildPlugin } from 'esbuild'
 import libEsm from 'lib-esm'
-import { node_modules as find_node_modules } from 'vite-plugin-utils/function'
-import { electronBuiltins, ensureDir } from './utils'
+import { electronBuiltins } from './utils'
 
 const cjs_require = createRequire(import.meta.url)
-const electronNpmPkgCjsNamespace = 'electron:npm-pkg-cjs'
+const electronPackageCjsNamespace = 'electron:package-cjs'
 const bareImport = /^[\w@].*/
-const CACHE_DIR = '.vite-electron-renderer'
-let node_modules_path: string
-let cache_dir: string
 
 export interface optimizerOptions {
   /**
@@ -25,44 +17,15 @@ export interface optimizerOptions {
   resolve?: (args: import('esbuild').OnResolveArgs) => { type: 'commonjs' | 'module' } | false | void | Promise<{ type: 'commonjs' | 'module' } | false | void>
 }
 
-export default function optimizer(options: optimizerOptions, nodeIntegration: boolean): VitePlugin {
+export default function optimizer(options: optimizerOptions = {}, nodeIntegration?: boolean): VitePlugin {
   return {
     name: 'vite-plugin-electron-renderer:optimizer',
     config(config) {
-      node_modules_path = find_node_modules(config.root ? path.resolve(config.root) : process.cwd())[0]
-      cache_dir = path.join(node_modules_path, CACHE_DIR)
-
       config.optimizeDeps ??= {}
       config.optimizeDeps.esbuildOptions ??= {}
       config.optimizeDeps.esbuildOptions.platform ??= 'node'
       config.optimizeDeps.esbuildOptions.plugins ??= []
       config.optimizeDeps.esbuildOptions.plugins.push(esbuildPlugin(options))
-
-      const metadata: {
-        '// nodeIntegration': string
-        nodeIntegration?: boolean
-        timestamp: number
-      } = {
-        '// nodeIntegration': 'Record the last nodeIntegration value compared to the new value and decide whether to clear the `.vite` directory cache.',
-        nodeIntegration: undefined,
-        timestamp: Date.now(),
-      }
-      const metafile = path.join(cache_dir, '_metadata.json')
-
-      if (fs.existsSync(metafile)) {
-        try {
-          Object.assign(metadata, JSON.parse(fs.readFileSync(metafile, 'utf8')))
-        } catch { }
-      }
-      if (metadata.nodeIntegration !== nodeIntegration) {
-        fs.rmSync(path.join(node_modules_path, '.vite'), { recursive: true, force: true })
-        ensureDir(cache_dir)
-        Object.assign(metadata, {
-          nodeIntegration,
-          timestamp: Date.now(),
-        })
-        fs.writeFileSync(metafile, JSON.stringify(metadata, null, 2))
-      }
     },
   }
 }
@@ -111,21 +74,24 @@ export function esbuildPlugin(options: optimizerOptions): EsbuildPlugin {
 
         // ---- Try to detect what type a module is ----
         let moduleType: 'commonjs' | 'module' | undefined
-        const packageJson = path.join(node_modules_path, id, 'package.json')
-        if (fs.existsSync(packageJson)) {
-          const pkg = cjs_require(packageJson)
-          if (pkg.type) {
+        let packageJson: string | undefined
+        try {
+          packageJson = cjs_require.resolve(`${id}/package.json`)
+        } catch { }
+        if (packageJson) {
+          const json = cjs_require(packageJson)
+          if (json.type) {
             // { "type": "module" }
-            moduleType = pkg.type === 'module' ? 'module' : 'commonjs'
-          } else if (pkg.module) {
+            moduleType = json.type === 'module' ? 'module' : 'commonjs'
+          } else if (json.module) {
             // { "module": "main.mjs" }
             moduleType = 'module'
-          } else if (pkg.exports) {
-            if (pkg.exports.import) {
+          } else if (json.exports) {
+            if (json.exports.import) {
               // { "exports":  { "import": "main.mjs" } }
               moduleType = 'module'
             } else {
-              for (const _export of Object.values<Record<string, string>>(pkg.exports)) {
+              for (const _export of Object.values<Record<string, string>>(json.exports)) {
                 if (_export.import) {
                   // { "exports":  { ".": { "import": "main.mjs" } } }
                   moduleType = 'module'
@@ -150,14 +116,14 @@ export function esbuildPlugin(options: optimizerOptions): EsbuildPlugin {
         if (moduleType === 'commonjs') {
           return {
             path: id,
-            namespace: electronNpmPkgCjsNamespace,
+            namespace: electronPackageCjsNamespace,
           }
         }
       })
 
       build.onLoad({
         filter: /.*/,
-        namespace: electronNpmPkgCjsNamespace,
+        namespace: electronPackageCjsNamespace,
       }, async ({ path: id }) => {
         const { exports } = libEsm({ exports: Object.getOwnPropertyNames(cjs_require(id)) })
 
