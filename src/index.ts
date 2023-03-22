@@ -19,11 +19,11 @@ export default function renderer(
   } = {}
 ): PluginOption {
   const {
-    nodeIntegration = false,
-    optimizer: optimizerOpts = {},
+    nodeIntegration,
+    optimizer: optimizerOpts,
   } = options
   return [
-    buildConfig(options.nodeIntegration),
+    buildConfig(nodeIntegration),
     optimizer(optimizerOpts, nodeIntegration),
     nodeIntegration && cjsShim(),
   ]
