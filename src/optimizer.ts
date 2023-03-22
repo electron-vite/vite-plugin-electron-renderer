@@ -1,16 +1,10 @@
-import fs from 'node:fs'
-import path from 'node:path'
 import { createRequire } from 'node:module'
-import { fileURLToPath } from 'node:url'
 import type { Plugin as VitePlugin } from 'vite'
-import {
-  type Plugin as EsbuildPlugin,
-} from 'esbuild'
+import type { Plugin as EsbuildPlugin } from 'esbuild'
 import libEsm from 'lib-esm'
 import { electronBuiltins } from './utils'
 
 const cjs_require = createRequire(import.meta.url)
-const cjs__dirname = path.dirname(fileURLToPath(import.meta.url))
 const electronPackageCjsNamespace = 'electron:package-cjs'
 const bareImport = /^[\w@].*/
 
@@ -32,37 +26,6 @@ export default function optimizer(options: optimizerOptions = {}, nodeIntegratio
       config.optimizeDeps.esbuildOptions.platform ??= 'node'
       config.optimizeDeps.esbuildOptions.plugins ??= []
       config.optimizeDeps.esbuildOptions.plugins.push(esbuildPlugin(options))
-
-      // ---- Rebuild `.vite` cache ----
-      const metadata: {
-        '// nodeIntegration': string
-        nodeIntegration?: boolean
-        timestamp: number
-      } = {
-        '// nodeIntegration': 'Record the last nodeIntegration value compared to the new value and decide whether to clear the `.vite` directory cache.',
-        nodeIntegration: undefined,
-        timestamp: Date.now(),
-      }
-      const metafile = path.join(cjs__dirname, '_metadata.json')
-
-      if (fs.existsSync(metafile)) {
-        try {
-          Object.assign(metadata, JSON.parse(fs.readFileSync(metafile, 'utf8')))
-        } catch { }
-      }
-      if (metadata.nodeIntegration !== nodeIntegration) {
-        Object.assign(metadata, {
-          nodeIntegration,
-          timestamp: Date.now(),
-        })
-        fs.writeFileSync(metafile, JSON.stringify(metadata, null, 2))
-
-        try {
-          const vite_metadata = cjs_require.resolve('.vite/deps/_metadata.json')
-          // Once `nodeIntegration` has changed, we should rebuild the cache
-          fs.unlinkSync(vite_metadata)
-        } catch { }
-      }
     },
   }
 }
