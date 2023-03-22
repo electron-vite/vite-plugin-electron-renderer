@@ -188,6 +188,7 @@ export default (lib.default || lib);
 
 Doing so will reduce the size of the packaged APP by [electron-builder](https://github.com/electron-userland/electron-builder).
 
+<!--
 ## Config presets (Opinionated)
 
 If you do not configure the following options, the plugin will modify their default values
@@ -196,3 +197,4 @@ If you do not configure the following options, the plugin will modify their defa
 - `build.rollupOptions.output.format = 'cjs'` (nodeIntegration: true)
 - `resolve.conditions = ['node']`
 - `optimizeDeps.exclude = ['electron']` - always
+-->
