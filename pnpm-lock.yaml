@@ -9,7 +9,6 @@ importers:
       rollup: ^3.19.1
       typescript: ^5.0.2
       vite: ^4.2.0
-      vite-plugin-utils: ^0.4.0
       vitest: ^0.29.3
     dependencies:
       lib-esm: 0.3.0
@@ -18,7 +17,6 @@ importers:
       rollup: 3.19.1
       typescript: 5.0.2
       vite: 4.2.0
-      vite-plugin-utils: 0.4.0
       vitest: 0.29.3
 
   examples/quick-start:
@@ -3379,10 +3377,6 @@ packages:
 
   /vite-plugin-electron/0.11.1:
     resolution: {integrity: sha512-pi9Wy4KCGjKIRvp7/5VUOT8BYEAJdZrpy3gI+GhGc5vYs2V9yPxLOtfCqNfSTYqH3uM6hYY6MyifFVku3Wg+2A==}
-    dev: true
-
-  /vite-plugin-utils/0.4.0:
-    resolution: {integrity: sha512-UZ9hkvRtKXIvQdjozVhUvD+/f2LOoEw3VbJBCWOvchKlzmjGrNULc4ZA/gfpedtjxjxq2tO6WBhrwtoevLnIWg==}
     dev: true
 
   /vite/4.0.3:
