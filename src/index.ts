@@ -15,16 +15,16 @@ export default function renderer(
     /**
      * Pre-Bundling modules for Electron Renderer process.
      */
-    optimizer?: optimizerOptions
+    optimizeDeps?: optimizerOptions
   } = {}
 ): PluginOption {
   const {
     nodeIntegration,
-    optimizer: optimizerOpts,
+    optimizeDeps,
   } = options
   return [
     buildConfig(nodeIntegration),
-    optimizer(optimizerOpts, nodeIntegration),
+    optimizer(optimizeDeps, nodeIntegration),
     nodeIntegration && cjsShim(),
   ]
 }
