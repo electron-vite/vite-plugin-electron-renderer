@@ -1,3 +1,8 @@
+## 0.13.4 (2023-03-22)
+
+- e3d737c refactor: remove rebuild `.vite` cache
+- 8de547b feat: better rebuild `.vite` cache
+
 ## 0.13.3 (2023-03-21)
 
 - de584cc fix: filter `virtual-module:`
