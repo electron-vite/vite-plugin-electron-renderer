@@ -1,3 +1,8 @@
+## 0.13.5 (2023-03-22)
+
+- efaf706 refactor: `options.optimizer` -> `options.optimizeDeps`
+- 82bc2f7 refactor: postinstall generation built-in module
+
 ## 0.13.4 (2023-03-22)
 
 - e3d737c refactor: remove rebuild `.vite` cache

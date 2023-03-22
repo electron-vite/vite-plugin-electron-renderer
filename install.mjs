@@ -90,5 +90,7 @@ export async function generateBuiltins() {
   // Electron
   fs.writeFileSync(path.join(builtins_dir, 'electron.js'), electron)
 
-  console.log('[builtins] build success.\n')
+  console.log('[vite-plugin-electron-renderer] built-in module generation successful.\n')
 }
+
+generateBuiltins()
