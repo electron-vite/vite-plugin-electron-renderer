@@ -11,6 +11,13 @@ export default defineConfig({
     renderer({
       // Enables use of Node.js API in the Renderer-process
       nodeIntegration: true,
+      optimizeDeps: {
+        resolve(args) {
+          if (args.path === 'serialport') {
+            return { platform: 'node' }
+          }
+        },
+      },
     }),
   ],
   build: {
