@@ -5,16 +5,17 @@ import libEsm from 'lib-esm'
 import { electronBuiltins } from './utils'
 
 const cjs_require = createRequire(import.meta.url)
-const electronPackageCjsNamespace = 'electron:package-cjs'
+const electronPlatformNodeNamespace = 'electron:platform-node'
 const bareImport = /^[\w@].*/
 
 export interface optimizerOptions {
   /**
    * Explicitly tell the Pre-Bundling how to work.
-   * 
-   * - `false` Vite's default Pre-Bundling will be used.
    */
-  resolve?: (args: import('esbuild').OnResolveArgs) => { type: 'commonjs' | 'module' } | false | void | Promise<{ type: 'commonjs' | 'module' } | false | void>
+  resolve?: (args: import('esbuild').OnResolveArgs) =>
+    | void
+    | { platform: 'browser' | 'node' }
+    | Promise<void | { platform: 'browser' | 'node' }>
 }
 
 export default function optimizer(options: optimizerOptions = {}, nodeIntegration?: boolean): VitePlugin {
@@ -23,7 +24,6 @@ export default function optimizer(options: optimizerOptions = {}, nodeIntegratio
     config(config) {
       config.optimizeDeps ??= {}
       config.optimizeDeps.esbuildOptions ??= {}
-      config.optimizeDeps.esbuildOptions.platform ??= 'node'
       config.optimizeDeps.esbuildOptions.plugins ??= []
       config.optimizeDeps.esbuildOptions.plugins.push(esbuildPlugin(options))
     },
@@ -72,58 +72,20 @@ export function esbuildPlugin(options: optimizerOptions): EsbuildPlugin {
           return
         }
 
-        // ---- Try to detect what type a module is ----
-        let moduleType: 'commonjs' | 'module' | undefined
-        let packageJson: string | undefined
-        try {
-          packageJson = cjs_require.resolve(`${id}/package.json`)
-        } catch { }
-        if (packageJson) {
-          const json = cjs_require(packageJson)
-          if (json.type) {
-            // { "type": "module" }
-            moduleType = json.type === 'module' ? 'module' : 'commonjs'
-          } else if (json.module) {
-            // { "module": "main.mjs" }
-            moduleType = 'module'
-          } else if (json.exports) {
-            if (json.exports.import) {
-              // { "exports":  { "import": "main.mjs" } }
-              moduleType = 'module'
-            } else {
-              for (const _export of Object.values<Record<string, string>>(json.exports)) {
-                if (_export.import) {
-                  // { "exports":  { ".": { "import": "main.mjs" } } }
-                  moduleType = 'module'
-                  break
-                }
-              }
-            }
-          }
-          moduleType ??= 'commonjs'
-        }
+        // TODO: Auto-detect `node` platform
 
-        const userType = await resolve?.(args)
-        if (userType === false) {
-          // Use Vite's default Pre-Bundling
-          return
-        }
-        if (userType && typeof userType === 'object') {
-          moduleType = userType.type
-        }
-
-        // Only `cjs` modules, especially C/C++ npm-pkg, `es` modules will be use Vite's default Pre-Bundling
-        if (moduleType === 'commonjs') {
+        const resolved = await resolve?.(args)
+        if (resolved?.platform === 'node') {
           return {
             path: id,
-            namespace: electronPackageCjsNamespace,
+            namespace: electronPlatformNodeNamespace,
           }
         }
       })
 
       build.onLoad({
         filter: /.*/,
-        namespace: electronPackageCjsNamespace,
+        namespace: electronPlatformNodeNamespace,
       }, async ({ path: id }) => {
         const { exports } = libEsm({ exports: Object.getOwnPropertyNames(cjs_require(id)) })
 
