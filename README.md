@@ -75,6 +75,27 @@ readFile('foo.txt')
 ipcRenderer.on('event-name', () => {/* something */})
 ```
 
+3. Using the third-part C/C++ package in the Renderer process.
+
+```js
+import renderer from 'vite-plugin-electron-renderer'
+
+export default {
+  plugins: [
+    renderer({
+      nodeIntegration: true,
+      optimizeDeps: {
+        resolve(args) {
+          if (args.path === 'serialport') {
+            return { platform: 'node' } // specify as `node` platform
+          }
+        },
+      },
+    }),
+  ],
+}
+```
+
 ## API *(Define)*
 
 `renderer(options: RendererOptions)`
@@ -85,6 +106,18 @@ export interface RendererOptions {
    * @default false
    */
   nodeIntegration?: boolean
+  /**
+   * Pre-Bundling modules for Electron Renderer process.
+   */
+  optimizeDeps?: {
+    /**
+     * Explicitly tell the Pre-Bundling how to work.
+     */
+    resolve?: (args: import('esbuild').OnResolveArgs) =>
+      | void
+      | { platform: 'browser' | 'node' }
+      | Promise<void | { platform: 'browser' | 'node' }>
+  }
 }
 ```
 
