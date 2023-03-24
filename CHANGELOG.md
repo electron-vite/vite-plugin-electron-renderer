@@ -1,4 +1,8 @@
-## 0.13.5 (2023-03-22)
+## 0.13.6 (2023-03-24)
+
+- 562aa20 refactor: explicitly specify the module platform
+
+## 0.13.5 (2023-03-23)
 
 - efaf706 refactor: `options.optimizer` -> `options.optimizeDeps`
 - 82bc2f7 refactor: postinstall generation built-in module
