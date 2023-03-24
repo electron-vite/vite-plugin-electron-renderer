@@ -26,6 +26,9 @@ export default function buildConfig(nodeIntegration?: boolean): Plugin[] {
             })) : []),
         ]
 
+        // Why is the builtin modules loaded by modifying `resolve.alias` instead of using the plugin `resolveId` + `load` hooks?
+        // `resolve.alias` can work in both the Renderer process and Web Worker, but not the plugin :(
+        // see - https://github.com/vitejs/vite/blob/v4.2.0/packages/vite/src/node/config.ts#L253-L256
         modifyAlias(config, aliases)
       },
     },
