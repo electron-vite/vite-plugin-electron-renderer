@@ -1,9 +1,10 @@
 import type {
   Alias,
+  BuildOptions,
   Plugin,
   UserConfig,
 } from 'vite'
-import type { ExternalOption, RollupOptions } from 'rollup'
+import type { RollupOptions } from 'rollup'
 import { electronBuiltins } from './utils'
 
 export default function buildConfig(nodeIntegration?: boolean): Plugin[] {
@@ -54,45 +55,49 @@ export default function buildConfig(nodeIntegration?: boolean): Plugin[] {
 
         if (nodeIntegration) {
           config.build.rollupOptions ??= {}
-          config.build.rollupOptions.external = withExternal(config.build.rollupOptions.external)
-          setOutputFormat(config.build.rollupOptions)
+          config.build.rollupOptions.output ??= {}
+
+          // `fs-extra` will extend the `fs` module
+          setOutputFreeze(config.build.rollupOptions)
+
+          // Some third-party modules, such as `fs-extra`, extend the native module
+          // `__esModule` to bypass Rollup's `getAugmentedNamespace`
+          // see - https://github.com/rollup/plugins/blob/commonjs-v24.0.0/packages/commonjs/src/helpers.js#L38
+          withIgnore(config.build)
         }
       },
     },
   ]
 }
 
-function withExternal(external?: ExternalOption) {
-  if (
-    Array.isArray(external) ||
-    typeof external === 'string' ||
-    external instanceof RegExp
-  ) {
-    // @ts-ignore
-    external = electronBuiltins.concat(external)
-  } else if (typeof external === 'function') {
-    const original = external
-    external = function externalFn(source, importer, isResolved) {
-      if (electronBuiltins.includes(source)) {
-        return true
-      }
-      return original(source, importer, isResolved)
-    }
-  } else {
-    external = electronBuiltins
-  }
-  return external
-}
-
-// At present, Electron can only support CommonJs
-function setOutputFormat(rollupOptions: RollupOptions) {
+function setOutputFreeze(rollupOptions: RollupOptions) {
   rollupOptions.output ??= {}
   if (Array.isArray(rollupOptions.output)) {
     for (const o of rollupOptions.output) {
-      o.format ??= 'cjs'
+      o.freeze ??= false
     }
   } else {
-    rollupOptions.output.format ??= 'cjs'
+    rollupOptions.output.freeze ??= false
+  }
+}
+
+function withIgnore(configBuild: BuildOptions) {
+  configBuild.commonjsOptions ??= {}
+  if (configBuild.commonjsOptions.ignore) {
+    if (typeof configBuild.commonjsOptions.ignore === 'function') {
+      const userIgnore = configBuild.commonjsOptions.ignore
+      configBuild.commonjsOptions.ignore = id => {
+        if (userIgnore?.(id) === true) {
+          return true
+        }
+        return electronBuiltins.includes(id)
+      }
+    } else {
+      // @ts-ignore
+      configBuild.commonjsOptions.ignore.push(...electronBuiltins)
+    }
+  } else {
+    configBuild.commonjsOptions.ignore = electronBuiltins
   }
 }
 

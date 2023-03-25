@@ -17,7 +17,7 @@ const electron = typeof require !== 'undefined'
     return {
       // TODO: polyfill
     };
-  }());
+  }()); Object.defineProperty(electron, '__esModule', { value: true });
 
 // Proxy in Worker
 let _ipcRenderer;
