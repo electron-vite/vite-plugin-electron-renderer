@@ -1,6 +1,39 @@
+## 0.13.7 (2023-03-25)
+
+- bda7d87 feat: set electron `__esModule`
+- 69960bd refactor: remove `cjs`, `external`. add `freeze`, `ignore`.
+- 521d8e2 docs: `resolve.alias` comments
+
+#### Main Changed
+
+1. No longer build in `cjs` format by default with improvements to `esm`.
+2. Remove the Node.js built-in module from `external` to be compatible with the `esm` build format.
+
 ## 0.13.6 (2023-03-24)
 
 - 562aa20 refactor: explicitly specify the module platform
+
+#### Main Changed
+
+Since `0.13.6`, Pre-Bundling have been greatly improved and Pure-JavaScript/Node.js modules no longer require any configuration - **out of the box**.
+
+C/C++ modules, however, still require explicit configuration.
+
+```js
+export default {
+  plugins: [
+    renderer({
+      optimizeDeps: {
+        resolve(args) {
+          if (args.path === 'serialport') {
+            return { platform: 'node' } // C/C++ module
+          }
+        },
+      },
+    }),
+  ],
+}
+```
 
 ## 0.13.5 (2023-03-23)
 
