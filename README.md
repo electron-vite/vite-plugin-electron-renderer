@@ -32,12 +32,6 @@
 npm i vite-plugin-electron-renderer -D
 ```
 
-## Examples
-
-- [electron-forge](https://github.com/electron-vite/vite-plugin-electron-renderer/tree/main/examples/electron-forge) - use in [Electron Forge](https://www.electronforge.io/)
-- [quick-start](https://github.com/electron-vite/vite-plugin-electron-renderer/tree/main/examples/quick-start)
-- [worker](https://github.com/electron-vite/vite-plugin-electron-renderer/tree/main/examples/worker)
-
 ## Usage
 
 1. This just modifies some of Vite's default config to make the Renderer process works.
@@ -52,7 +46,7 @@ export default {
 }
 ```
 
-2. Using the Electron and Node.js API in the Renderer process.
+2. Using the third-part C/C++ package in the Renderer process.
 
 ```js
 import renderer from 'vite-plugin-electron-renderer'
@@ -60,36 +54,8 @@ import renderer from 'vite-plugin-electron-renderer'
 export default {
   plugins: [
     renderer({
-      nodeIntegration: true,
-    }),
-  ],
-}
-```
-
-```ts
-// e.g. - renderer.js
-import { readFile } from 'fs'
-import { ipcRenderer } from 'electron'
-
-readFile('foo.txt')
-ipcRenderer.on('event-name', () => {/* something */})
-```
-
-3. Using the third-part C/C++ package in the Renderer process.
-
-```js
-import renderer from 'vite-plugin-electron-renderer'
-
-export default {
-  plugins: [
-    renderer({
-      nodeIntegration: true,
-      optimizeDeps: {
-        resolve(args) {
-          if (args.path === 'serialport') {
-            return { platform: 'node' } // specify as `node` platform
-          }
-        },
+      resolve: {
+        serialport: () => ({ platform: 'node' }), // specify as `node` platform
       },
     }),
   ],
@@ -103,27 +69,32 @@ export default {
 ```ts
 export interface RendererOptions {
   /**
-   * @default false
+   * Explicitly tell Vite how to load modules, which is very useful for C/C++ modules.  
+   * Most of the time, you don't need to use it when a module is a C/C++ module, you can load them by return `{ platform: 'node' }`.  
+   * 
+   * If you know exactly how Vite works, you can customize the return snippets.  
+   * `e.g.`
+   * ```js
+   * renderer({
+   *   resolve: (id) => `const lib = require("${id}");\nexport default lib.default || lib;`
+   * })
+   * ```
+   * 
+   * @experimental
    */
-  nodeIntegration?: boolean
-  /**
-   * Pre-Bundling modules for Electron Renderer process.
-   */
-  optimizeDeps?: {
-    /**
-     * Explicitly tell the Pre-Bundling how to work.
-     */
-    resolve?: (args: import('esbuild').OnResolveArgs) =>
-      | void
-      | { platform: 'browser' | 'node' }
-      | Promise<void | { platform: 'browser' | 'node' }>
+  resolve?: {
+    [id: string]: (() => string | { platform: 'browser' | 'node' } | Promise<string | { platform: 'browser' | 'node' }>)
   }
 }
 ```
 
+## [Examples](https://github.com/electron-vite/vite-plugin-electron-renderer/tree/main/examples)
+
+- [quick-start](https://github.com/electron-vite/vite-plugin-electron-renderer/tree/main/examples/quick-start)
+
 ## How to work
 
-###### Electron-Renderer(vite serve)
+<!-- ###### Electron-Renderer(vite serve) -->
 
 > Load Electron and Node.js cjs-packages/builtin-modules (Schematic)
 
@@ -152,6 +123,7 @@ export interface RendererOptions {
  ┗————————————————————————————————————————┛                 ┗—————————————————┛
 ```
 
+<!--
 ###### Electron-Renderer(vite build)
 
 1. Add "fs module" to `rollupOptions.external`.
@@ -162,7 +134,9 @@ import { ipcRenderer } from 'electron'
 ↓
 const { ipcRenderer } = require('electron')
 ```
+-->
 
+<!--
 ## Dependency Pre-Bundling
 
 **In general**. Vite will pre-bundle all third-party modules in a Web-based usage format, but it can not adapt to Electron Renderer process especially C/C++ modules. So we must be make a little changes for this.  
@@ -179,6 +153,7 @@ export default (lib.default || lib);
 
 **By the way**. If an npm package is a pure ESM format package, and the packages it depends on are also in ESM format, then put it in `optimizeDeps.exclude` and it will work normally.  
 [See the explanation](https://github.com/electron-vite/vite-plugin-electron-renderer/blob/v0.10.3/examples/quick-start/vite.config.ts#L33-L36)
+-->
 
 ## `dependencies` vs `devDependencies`
 

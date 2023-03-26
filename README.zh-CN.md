@@ -4,8 +4,6 @@
 
 ## 原理
 
-###### Electron-Renderer(vite serve)
-
 > 加载 Electron、Node.js CJS 包/内置模块/electron (示意图)
 
 ```
@@ -33,6 +31,7 @@
  ┗————————————————————————————————————————┛                 ┗—————————————————┛
 ```
 
+<!--
 ###### Electron-Renderer(vite build)
 
 1. 将 "fs module" 插入到 `rollupOptions.external`.
@@ -43,7 +42,9 @@ import { ipcRenderer } from 'electron'
 ↓
 const { ipcRenderer } = require('electron')
 ```
+-->
 
+<!--
 ## Dependency Pre-Bundling
 
 **通常的**，Vite 会将第三方模块以 Web 的使用格式预构建，但它不适用 Electron 渲染进程，特别是 C/C++ 模块。所以我们必须为此做一点改变。  
@@ -61,6 +62,7 @@ export default (lib.default || lib);
 
 **顺带说一句**. 如果一个 npm 包是个一纯 ESM 格式包，并且它自身的依赖也是 ESM 格式包，那么直接包名放到 `optimizeDeps.exclude` 中即可正常使用。   
 [这里解释了它](https://github.com/electron-vite/vite-plugin-electron/blob/14684ba108beec305edf4c9d8865527f6508f987/examples/nodeIntegration/vite.config.ts#L36-L39)
+-->
 
 ## `dependencies` 与 `devDependencies`
 
