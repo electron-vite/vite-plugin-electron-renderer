@@ -1,3 +1,56 @@
+## 0.13.8 (2023-03-26)
+
+- 9490072 docs: v0.13.8
+- d74bbd5 chore: `.js` -> `.mjs`
+- 1b75b57 refactor!: retain only the C/C++ module API 🔥
+
+#### Break!
+
+`0.13.8` is very compact, keeping only the API for handling `C/C++` modules.
+
+
+`renderer(options: RendererOptions)`
+
+```ts
+export interface RendererOptions {
+  /**
+   * Explicitly tell Vite how to load modules, which is very useful for C/C++ modules.  
+   * Most of the time, you don't need to use it when a module is a C/C++ module, you can load them by return `{ platform: 'node' }`.  
+   * 
+   * If you know exactly how Vite works, you can customize the return snippets.  
+   * `e.g.`
+   * ```js
+   * renderer({
+   *   resolve: (id) => `const lib = require("${id}");\nexport default lib.default || lib;`
+   * })
+   * ```
+   * 
+   * @experimental
+   */
+  resolve?: {
+    [id: string]: (() => string | { platform: 'browser' | 'node' } | Promise<string | { platform: 'browser' | 'node' }>)
+  }
+}
+```
+
+**Here is an example using serialport**
+
+```js
+import renderer from 'vite-plugin-electron-renderer'
+
+export default {
+  plugins: [
+    renderer({
+      resolve: {
+        serialport: () => ({ platform: 'node' }),
+        // Equivalent to
+        // serialport: () => `const lib = require("serialport");\nexport default lib.default || lib;`
+      },
+    }),
+  ],
+}
+```
+
 ## 0.13.7 (2023-03-25)
 
 - bda7d87 feat: set electron `__esModule`
