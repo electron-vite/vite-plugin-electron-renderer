@@ -17,7 +17,7 @@ const electron = typeof require !== 'undefined'
     return {
       // TODO: polyfill
     };
-  }()); Object.defineProperty(electron, '__esModule', { value: true });
+  }());
 
 // Proxy in Worker
 let _ipcRenderer;
@@ -75,7 +75,7 @@ export async function generateBuiltins() {
 
   // Node.js
   for (const module of builtins) {
-    const filename = path.join(builtins_dir, module) + '.js'
+    const filename = path.join(builtins_dir, module) + '.mjs'
     const dirname = path.dirname(filename)
     !fs.existsSync(dirname) && fs.mkdirSync(dirname, { recursive: true })
 
@@ -88,7 +88,7 @@ export async function generateBuiltins() {
   }
 
   // Electron
-  fs.writeFileSync(path.join(builtins_dir, 'electron.js'), electron)
+  fs.writeFileSync(path.join(builtins_dir, 'electron.mjs'), electron)
 
   console.log('[vite-plugin-electron-renderer] built-in module generation successful.\n')
 }
