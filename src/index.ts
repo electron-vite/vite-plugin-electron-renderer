@@ -84,12 +84,9 @@ export default function renderer(options: RendererOptions = {}): VitePlugin[] {
           .filter(m => !m.startsWith('node:'))
           .map<Alias>(m => ({
             find: new RegExp(`^(node:)?${m}$`),
-
-            // Must be use absolute path for `pnnpm` monorepo - `shamefully-hoist=true`, but it will cause pre-bundle errors. 🤔
-            // `error: The entry point "electron" cannot be marked as external`
-            // replacement: path.join(__dirname, 'builtins', m),
-
+            // Vite's pre-bundle only recognizes bare-import
             replacement: `vite-plugin-electron-renderer/builtins/${m}`,
+            // TODO: must be use absolute path for `pnnpm` monorepo - `shamefully-hoist=true` 🤔
           }))
 
         // Why is the builtin modules loaded by modifying `resolve.alias` instead of using the plugin `resolveId` + `load` hooks?
@@ -155,9 +152,16 @@ async function buildResolve(options: RendererOptions) {
       snippets = result
     } else if (result && typeof result === 'object' && result.platform === 'node') {
       const { exports } = libEsm({ exports: Object.getOwnPropertyNames(await import(name)) })
-      // If a module is a CommonJs, use the "require" loading it can bring better performance.
-      // Especially it is a C/C++ module, this can avoid a lot of trouble.
-      snippets = `const _M_ = require("${name}");\n${exports}`
+      snippets = `
+// Use "__cjs_require" avoid esbuild parse "require"
+// TODO: better implements
+const __cjs_require = require;
+
+// If a module is a CommonJs, use the "require" loading it can bring better performance.
+// Especially it is a C/C++ module, this can avoid a lot of trouble.
+const _M_ = __cjs_require("${name}");
+${exports}
+`.trim()
     }
 
     if (!snippets) continue
