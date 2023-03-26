@@ -16,9 +16,6 @@ import cjsShim from './cjs-shim'
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const builtins = builtinModules.filter(m => !m.startsWith('_')); builtins.push(...builtins.map(m => `node:${m}`))
 const electronBuiltins = ['electron', ...builtins]
-// Must be use absolute path for `pnnpm` monorepo - `shamefully-hoist=true`
-const BUILTINS_PATH = path.join(__dirname, 'builtins')
-const RESOLVE_PATH = path.join(__dirname, '.resolve')
 
 export interface RendererOptions {
   /**
@@ -87,7 +84,12 @@ export default function renderer(options: RendererOptions = {}): VitePlugin[] {
           .filter(m => !m.startsWith('node:'))
           .map<Alias>(m => ({
             find: new RegExp(`^(node:)?${m}$`),
-            replacement: path.join(BUILTINS_PATH, m),
+
+            // Must be use absolute path for `pnnpm` monorepo - `shamefully-hoist=true`, but it will cause pre-bundle errors. 🤔
+            // `error: The entry point "electron" cannot be marked as external`
+            // replacement: path.join(__dirname, 'builtins', m),
+
+            replacement: `vite-plugin-electron-renderer/builtins/${m}`,
           }))
 
         // Why is the builtin modules loaded by modifying `resolve.alias` instead of using the plugin `resolveId` + `load` hooks?
@@ -160,16 +162,16 @@ async function buildResolve(options: RendererOptions) {
 
     if (!snippets) continue
 
-    const resolvePath = path.join(RESOLVE_PATH, name)
-    aliases.push({
-      find: name,
-      replacement: resolvePath,
-    })
-
+    const resolvePath = path.join(__dirname, '.resolve', name)
     if (!/* reuse cache */fs.existsSync(resolvePath)) {
       ensureDir(path.dirname(resolvePath))
       fs.writeFileSync(resolvePath + '.mjs', snippets)
     }
+
+    aliases.push({
+      find: name,
+      replacement: `vite-plugin-electron-renderer/.resolve/${name}`,
+    })
   }
 
   return aliases
