@@ -1,3 +1,7 @@
+## 0.13.10 (2023-03-26)
+
+- 8d2d914 fix: use `__cjs_require` avoid esbuild parse
+
 ## 0.13.9 (2023-03-26)
 
 - 6ff0897 fix: use bare-path instead absolute-path
