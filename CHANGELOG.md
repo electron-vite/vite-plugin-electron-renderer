@@ -1,3 +1,7 @@
+## 0.13.9 (2023-03-26)
+
+- 6ff0897 fix: use bare-path instead absolute-path
+
 ## 0.13.8 (2023-03-26)
 
 - 9490072 docs: v0.13.8
