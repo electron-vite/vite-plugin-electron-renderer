@@ -1,5 +1,6 @@
 ## 0.13.11 (2023-03-27)
 
+- b0312e9 fix: use `__cjs_require` avoid esbuild parse `require`
 - dde27b7 fix: remove esbuild plugin #46
 
 ## 0.13.10 (2023-03-26)
