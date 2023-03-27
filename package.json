@@ -1,6 +1,6 @@
 {
   "name": "vite-plugin-electron-renderer",
-  "version": "0.13.10",
+  "version": "0.13.11",
   "description": "Support use Node.js API in Electron-Renderer",
   "main": "index.js",
   "types": "types",
