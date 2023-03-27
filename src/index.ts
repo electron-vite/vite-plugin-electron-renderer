@@ -9,14 +9,13 @@ import type {
   UserConfig,
 } from 'vite'
 import type { RollupOptions } from 'rollup'
+import type { Plugin as EsbuildPlugin } from 'esbuild'
 import libEsm from 'lib-esm'
 import cjsShim from './cjs-shim'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const builtins = builtinModules.filter(m => !m.startsWith('_')); builtins.push(...builtins.map(m => `node:${m}`))
 const electronBuiltins = ['electron', ...builtins]
-const BUILTIN_PATH = 'vite-plugin-electron-renderer/builtins'
-const RESOLVE_PATH = 'vite-plugin-electron-renderer/.resolve'
 
 export interface RendererOptions {
   /**
@@ -71,13 +70,22 @@ export default function renderer(options: RendererOptions = {}): VitePlugin[] {
         // see - https://github.com/rollup/plugins/blob/commonjs-v24.0.0/packages/commonjs/src/helpers.js#L38
         withIgnore(config.build)
 
+        // -------------------------------------------------
+
+        config.optimizeDeps ??= {}
+        config.optimizeDeps.esbuildOptions ??= {}
+        config.optimizeDeps.esbuildOptions.plugins ??= []
+        config.optimizeDeps.esbuildOptions.plugins.push(esbuildPlugin())
+
+        // -------------------------------------------------
+
         const resolveAliases = await buildResolve(options)
         const builtinAliases: Alias[] = electronBuiltins
           .filter(m => !m.startsWith('node:'))
           .map<Alias>(m => ({
             find: new RegExp(`^(node:)?${m}$`),
             // Vite's pre-bundle only recognizes bare-import
-            replacement: `${BUILTIN_PATH}/${m}`,
+            replacement: `vite-plugin-electron-renderer/builtins/${m}`,
             // TODO: must be use absolute path for `pnnpm` monorepo - `shamefully-hoist=true` 🤔
           }))
 
@@ -166,11 +174,32 @@ ${exports}
 
     aliases.push({
       find: name,
-      replacement: `${RESOLVE_PATH}/${name}`,
+      replacement: `vite-plugin-electron-renderer/.resolve/${name}`,
     })
   }
 
   return aliases
+}
+
+function esbuildPlugin(): EsbuildPlugin {
+  return {
+    name: 'vite-plugin-target:optimizer:esbuild',
+    setup(build) {
+      // https://github.com/vitejs/vite/blob/v4.2.0/packages/vite/src/node/optimizer/esbuildDepPlugin.ts#L277-L279
+      const escape = (text: string) =>
+        `^${text.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&')}$`
+      const filter = new RegExp(electronBuiltins.map(escape).join('|'))
+
+      // Avoid Vite internal esbuild plugin
+      // https://github.com/vitejs/vite/blob/v4.2.0/packages/vite/src/node/optimizer/esbuildDepPlugin.ts#L288
+      build.onResolve({ filter }, args => {
+        return {
+          path: args.path,
+          external: true,
+        }
+      })
+    },
+  }
 }
 
 function ensureDir(dirname: string) {
