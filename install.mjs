@@ -11,7 +11,10 @@ export const builtins_dir = path.join(__dirname, 'builtins')
 export const electron = `
 const electron = typeof require !== 'undefined'
   // All exports module see https://www.electronjs.org -> API -> Renderer Process Modules
-  ? require("electron")
+  ? (function requireElectron() {
+    const __cjs_require = require;
+    return __cjs_require("electron");
+  }())
   : (function nodeIntegrationWarn() {
     console.error(\`If you need to use "electron" in the Renderer process, make sure that "nodeIntegration" is enabled in the Main process.\`);
     return {
@@ -84,7 +87,9 @@ export async function generateBuiltins() {
     //  ❯ node:trace_events:25:9
 
     const { exports } = libEsm({ exports: Object.keys(await import(module)) })
-    fs.writeFileSync(filename, `const _M_ = require("${module}");\n${exports}`)
+    // Use "__cjs_require" avoid esbuild parse "require"
+    // TODO: better implements
+    fs.writeFileSync(filename, `const __cjs_require = require; const _M_ = __cjs_require("${module}");\n${exports}`)
   }
 
   // Electron
