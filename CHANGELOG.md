@@ -1,3 +1,25 @@
+## 0.13.12 (2023-03-28)
+
+- 7f6b3a4 fix: correctly path
+- a7b1132 docs: update
+- 6604d99 chore: `install.mjs` -> `install.js`
+- 2f70a9b refactor: separate cjs-shim.ts
+- 45fef6b refactor: cleanup, separate cjs-shim.ts
+
+#### Main Changed
+
+If you build in `cjs` format, you need to import the corresponding shim plugin
+
+```js
+import cjsShim from 'vite-plugin-electron-renderer/dist/cjs-shim.mjs'
+
+export default {
+  plugins: [
+    cjsShim(),
+  ],
+}
+```
+
 ## 0.13.11 (2023-03-27)
 
 - b0312e9 fix: use `__cjs_require` avoid esbuild parse `require`
