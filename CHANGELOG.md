@@ -14,6 +14,13 @@ If you build in `cjs` format, you need to import the corresponding shim plugin
 import cjsShim from 'vite-plugin-electron-renderer/dist/cjs-shim.mjs'
 
 export default {
+  build: {
+    rollupOptions: {
+      output: {
+        format: 'cjs',
+      },
+    },
+  },
   plugins: [
     cjsShim(),
   ],
