@@ -10,11 +10,11 @@ import type {
 } from 'vite'
 import type { RollupOptions } from 'rollup'
 import libEsm from 'lib-esm'
-import cjsShim from './cjs-shim'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const builtins = builtinModules.filter(m => !m.startsWith('_')); builtins.push(...builtins.map(m => `node:${m}`))
 const electronBuiltins = ['electron', ...builtins]
+const PACKAGE_PATH = path.join(__dirname, '..')
 const BUILTIN_PATH = 'vite-plugin-electron-renderer/builtins'
 const RESOLVE_PATH = 'vite-plugin-electron-renderer/.resolve'
 
@@ -24,10 +24,15 @@ export interface RendererOptions {
    * Most of the time, you don't need to use it when a module is a C/C++ module, you can load them by return `{ platform: 'node' }`.  
    * 
    * If you know exactly how Vite works, you can customize the return snippets.  
-   * `e.g.`
+   * 
    * ```js
    * renderer({
-   *   resolve: (id) => `const lib = require("${id}");\nexport default lib.default || lib;`
+   *   resolve: {
+   *     // Use the serialport(C/C++) module as an example
+   *     serialport: () => ({ platform: 'node' }),
+   *     // Equivalent to
+   *     serialport: () => `const lib = require("serialport"); export default lib.default || lib;`,
+   *   },
    * })
    * ```
    * 
@@ -38,58 +43,51 @@ export interface RendererOptions {
   }
 }
 
-export default function renderer(options: RendererOptions = {}): VitePlugin[] {
-  return [
-    cjsShim(),
-    {
-      name: 'vite-plugin-electron-renderer:build-config',
-      async config(config) {
-        // Make sure that Electron can be loaded into the local file using `loadFile` after packaging
-        config.base ??= './'
+export default function renderer(options: RendererOptions = {}): VitePlugin {
+  return {
+    name: 'vite-plugin-electron-renderer',
+    async config(config) {
+      // Make sure that Electron can be loaded into the local file using `loadFile()` after package
+      config.base ??= './'
 
-        config.build ??= {}
+      config.build ??= {}
 
-        // TODO: init `config.build.target`
-        // https://github.com/vitejs/vite/pull/8843
+      // https://github.com/electron-vite/electron-vite-vue/issues/107
+      config.build.cssCodeSplit ??= false
 
-        // https://github.com/electron-vite/electron-vite-vue/issues/107
-        config.build.cssCodeSplit ??= false
+      // This ensures that static resources are loaded correctly, such as images, `worker.js`
+      // BWT, the `.js` file can be loaded correctly with './cjs-shim.ts'
+      config.build.assetsDir ??= ''
+      // TODO: compatible with custom assetsDir for static resources
 
-        // TODO: compatible with custom assetsDir
-        // This will guarantee the proper loading of static resources, such as images, `worker.js`
-        // The `.js` file can be loaded correctly with cjs-shim.ts
-        config.build.assetsDir ??= ''
+      config.build.rollupOptions ??= {}
 
-        config.build.rollupOptions ??= {}
-        config.build.rollupOptions.output ??= {}
+      // Some third-party modules, such as `fs-extra`, it will extend the nativ fs module, maybe we need to stop it
+      // ① Avoid freeze Object
+      setOutputFreeze(config.build.rollupOptions)
+      // ② Avoid not being able to set - https://github.com/rollup/plugins/blob/commonjs-v24.0.0/packages/commonjs/src/helpers.js#L55-L60
+      withIgnore(config.build)
 
-        // `fs-extra` will extend the `fs` module
-        setOutputFreeze(config.build.rollupOptions)
+      const resolveAliases = await buildResolve(options)
+      const builtinAliases: Alias[] = electronBuiltins
+        .filter(m => !m.startsWith('node:'))
+        .map<Alias>(m => ({
+          find: new RegExp(`^(node:)?${m}$`),
+          // Vite's pre-bundle only recognizes bare-import
+          replacement: `${BUILTIN_PATH}/${m}`,
+          // TODO: must be use absolute path for `pnnpm` monorepo - `shamefully-hoist=true` 🤔
+        }))
 
-        // Some third-party modules, such as `fs-extra`, extend the native module
-        // `__esModule` to bypass Rollup's `getAugmentedNamespace`
-        // see - https://github.com/rollup/plugins/blob/commonjs-v24.0.0/packages/commonjs/src/helpers.js#L38
-        withIgnore(config.build)
-
-        const resolveAliases = await buildResolve(options)
-        const builtinAliases: Alias[] = electronBuiltins
-          .filter(m => !m.startsWith('node:'))
-          .map<Alias>(m => ({
-            find: new RegExp(`^(node:)?${m}$`),
-            // Vite's pre-bundle only recognizes bare-import
-            replacement: `${BUILTIN_PATH}/${m}`,
-            // TODO: must be use absolute path for `pnnpm` monorepo - `shamefully-hoist=true` 🤔
-          }))
-
-        // Why is the builtin modules loaded by modifying `resolve.alias` instead of using the plugin `resolveId` + `load` hooks?
-        // `resolve.alias` can work in both the Renderer process and Web Worker, but not the plugin :(
-        // see - https://github.com/vitejs/vite/blob/v4.2.0/packages/vite/src/node/config.ts#L253-L256
-        modifyAlias(config, [...resolveAliases, ...builtinAliases])
-      },
-    }
-  ]
+      // Why is the builtin modules loaded by modifying `resolve.alias` instead of using the plugin `resolveId` + `load` hooks?
+      // `resolve.alias` has a very high priority in Vite! it works on Pre-Bundling, build, serve, ssr etc. anywhere
+      // secondly, `resolve.alias` can work in both the Renderer process and Web Worker, but not the plugin :(
+      // ① Alias priority - https://github.com/vitejs/vite/blob/v4.2.0/packages/vite/src/node/plugins/index.ts#L45
+      // ② Use in Pre-Bundling - https://github.com/vitejs/vite/blob/v4.2.0/packages/vite/src/node/optimizer/esbuildDepPlugin.ts#L199
+      // ③ Worker does not share plugins - https://github.com/vitejs/vite/blob/v4.2.0/packages/vite/src/node/config.ts#L253-L256
+      modifyAlias(config, [...resolveAliases, ...builtinAliases])
+    },
+  }
 }
-
 
 function setOutputFreeze(rollupOptions: RollupOptions) {
   rollupOptions.output ??= {}
@@ -145,21 +143,17 @@ async function buildResolve(options: RendererOptions) {
     } else if (result && typeof result === 'object' && result.platform === 'node') {
       const { exports } = libEsm({ exports: Object.getOwnPropertyNames(await import(name)) })
       snippets = `
-// Use "__cjs_require" avoid esbuild parse "require"
-// TODO: better implements
-const __cjs_require = require;
-
-// If a module is a CommonJs, use the "require" loading it can bring better performance.
-// Especially it is a C/C++ module, this can avoid a lot of trouble.
-const _M_ = __cjs_require("${name}");
+// If a module is a CommonJs, use the \`require()\` load it can bring better performance, 
+// especially it is a C/C++ module, this can avoid a lot of trouble.
+const avoid_parse_require = require; const _M_ = avoid_parse_require("${name}");
 ${exports}
 `.trim()
     }
 
     if (!snippets) continue
 
-    const resolvePath = path.join(__dirname, '.resolve', name)
-    if (!/* reuse cache */fs.existsSync(resolvePath)) {
+    const resolvePath = path.join(PACKAGE_PATH, '.resolve', name)
+    if (!fs.existsSync(/* reuse cache */resolvePath)) {
       ensureDir(path.dirname(resolvePath))
       fs.writeFileSync(resolvePath + '.mjs', snippets)
     }
