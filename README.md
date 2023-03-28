@@ -73,10 +73,15 @@ export interface RendererOptions {
    * Most of the time, you don't need to use it when a module is a C/C++ module, you can load them by return `{ platform: 'node' }`.  
    * 
    * If you know exactly how Vite works, you can customize the return snippets.  
-   * `e.g.`
+   * 
    * ```js
    * renderer({
-   *   resolve: (id) => `const lib = require("${id}");\nexport default lib.default || lib;`
+   *   resolve: {
+   *     // Use the serialport(C/C++) module as an example
+   *     serialport: () => ({ platform: 'node' }),
+   *     // Equivalent to
+   *     serialport: () => `const lib = require("serialport"); export default lib.default || lib;`,
+   *   },
    * })
    * ```
    * 
