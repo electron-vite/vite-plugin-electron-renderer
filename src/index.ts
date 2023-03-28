@@ -14,6 +14,7 @@ import libEsm from 'lib-esm'
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const builtins = builtinModules.filter(m => !m.startsWith('_')); builtins.push(...builtins.map(m => `node:${m}`))
 const electronBuiltins = ['electron', ...builtins]
+const PACKAGE_PATH = path.join(__dirname, '..')
 const BUILTIN_PATH = 'vite-plugin-electron-renderer/builtins'
 const RESOLVE_PATH = 'vite-plugin-electron-renderer/.resolve'
 
@@ -151,7 +152,7 @@ ${exports}
 
     if (!snippets) continue
 
-    const resolvePath = path.join(__dirname, '.resolve', name)
+    const resolvePath = path.join(PACKAGE_PATH, '.resolve', name)
     if (!fs.existsSync(/* reuse cache */resolvePath)) {
       ensureDir(path.dirname(resolvePath))
       fs.writeFileSync(resolvePath + '.mjs', snippets)
