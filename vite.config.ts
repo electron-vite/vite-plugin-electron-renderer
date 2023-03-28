@@ -9,9 +9,11 @@ export default defineConfig({
   build: {
     minify: false,
     emptyOutDir: false,
-    outDir: '',
     lib: {
-      entry: 'src/index.ts',
+      entry: {
+        index: 'src/index.ts',
+        'cjs-shim': 'src/cjs-shim.ts',
+      },
       formats: ['cjs', 'es'],
       fileName: format => format === 'es' ? '[name].mjs' : '[name].js',
     },
@@ -32,7 +34,9 @@ export default defineConfig({
     name: 'generate-types',
     async closeBundle() {
       removeTypes()
-      generateTypes()
+      await generateTypes()
+      moveTypesToDist()
+      removeTypes()
     },
   }],
 })
@@ -54,4 +58,14 @@ function generateTypes() {
     })
     cp.on('error', process.exit)
   })
+}
+
+function moveTypesToDist() {
+  const types = path.join(__dirname, 'types')
+  const dist = path.join(__dirname, 'dist')
+  const files = fs.readdirSync(types).filter(n => n.endsWith('.d.ts'))
+  for (const file of files) {
+    fs.copyFileSync(path.join(types, file), path.join(dist, file))
+    console.log('[types]', `types/${file} -> dist/${file}`)
+  }
 }

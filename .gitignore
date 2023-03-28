@@ -104,14 +104,12 @@ dist
 .tern-port
 
 .DS_Store
-.resolve
 
 package-lock.json
 # pnpm-lock.yaml
 yarn.lock
 
-/types
+/.resolve
 /builtins
-/index.mjs
-/index.cjs
-/index.js
+/dist
+/types
