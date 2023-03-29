@@ -1,3 +1,7 @@
+## 0.13.13 (2023-03-29)
+
+- 8c044c9 fix: `require` instead `await import`
+
 ## 0.13.12 (2023-03-28)
 
 - 7f6b3a4 fix: correctly path
