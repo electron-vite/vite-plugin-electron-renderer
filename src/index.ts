@@ -1,7 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { builtinModules } from 'node:module'
+import { createRequire, builtinModules } from 'node:module'
 import type {
   Alias,
   BuildOptions,
@@ -12,6 +12,7 @@ import type { RollupOptions } from 'rollup'
 import libEsm from 'lib-esm'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const require = createRequire(import.meta.url)
 const builtins = builtinModules.filter(m => !m.startsWith('_')); builtins.push(...builtins.map(m => `node:${m}`))
 const electronBuiltins = ['electron', ...builtins]
 const PACKAGE_PATH = path.join(__dirname, '..')
@@ -141,7 +142,7 @@ async function buildResolve(options: RendererOptions) {
     if (typeof result === 'string') {
       snippets = result
     } else if (result && typeof result === 'object' && result.platform === 'node') {
-      const { exports } = libEsm({ exports: Object.getOwnPropertyNames(await import(name)) })
+      const { exports } = libEsm({ exports: Object.getOwnPropertyNames(/* await import */require(name)) })
       snippets = `
 // If a module is a CommonJs, use the \`require()\` load it can bring better performance, 
 // especially it is a C/C++ module, this can avoid a lot of trouble.
