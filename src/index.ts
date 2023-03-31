@@ -52,15 +52,6 @@ export default function renderer(options: RendererOptions = {}): VitePlugin {
       config.base ??= './'
 
       config.build ??= {}
-
-      // https://github.com/electron-vite/electron-vite-vue/issues/107
-      config.build.cssCodeSplit ??= false
-
-      // This ensures that static resources are loaded correctly, such as images, `worker.js`
-      // BWT, the `.js` file can be loaded correctly with './cjs-shim.ts'
-      config.build.assetsDir ??= ''
-      // TODO: compatible with custom assetsDir for static resources
-
       config.build.rollupOptions ??= {}
 
       // Some third-party modules, such as `fs-extra`, it will extend the nativ fs module, maybe we need to stop it

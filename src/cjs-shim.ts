@@ -7,6 +7,19 @@ export default function cjsShim(): Plugin {
   return {
     name: 'vite-plugin-electron-renderer:cjs-shim',
     apply: 'build',
+    config(config) {
+      // Assets are not loaded correctly under CJS, so some default build options need to be changed here
+      config.build ??= {}
+
+      // https://github.com/electron-vite/electron-vite-vue/issues/107
+      config.build.cssCodeSplit ??= false
+
+      // This ensures that static resources are loaded correctly, such as images, `worker.js`
+      // BWT, the `.js` file can be loaded correctly with `<script id="shim-require-id">`
+      // This causes BUG in ESN
+      config.build.assetsDir ??= ''
+      // TODO: compatible with custom assetsDir for static resources
+    },
     configResolved(_config) {
       config = _config
 
