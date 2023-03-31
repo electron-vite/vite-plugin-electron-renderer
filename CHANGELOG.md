@@ -1,3 +1,7 @@
+## 0.13.14 (2023-03-31)
+
+- c68d26a fix: move cjs config to cjs-shim.ts #107 | [electron-vite-vue/issues/107](https://github.com/electron-vite/electron-vite-vue/issues/107)
+
 ## 0.13.13 (2023-03-29)
 
 - 8c044c9 fix: `require` instead `await import`
