@@ -23,7 +23,6 @@
     "build": "vite build",
     "types": "tsc --emitDeclarationOnly",
     "prepublishOnly": "npm run test && npm run build",
-    "postinstall": "node install.js",
     "test": "vitest run"
   },
   "dependencies": {
@@ -34,6 +33,7 @@
     "rollup": "^3.19.1",
     "typescript": "^5.0.2",
     "vite": "^4.2.0",
+    "vite-plugin-utils": "^0.4.0",
     "vitest": "^0.29.3"
   },
   "files": [

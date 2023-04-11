@@ -1,6 +1,5 @@
 import fs from 'node:fs'
 import path from 'node:path'
-import { fileURLToPath } from 'node:url'
 import { createRequire, builtinModules } from 'node:module'
 import type {
   Alias,
@@ -10,14 +9,80 @@ import type {
 } from 'vite'
 import type { RollupOptions } from 'rollup'
 import libEsm from 'lib-esm'
+import { COLOURS, node_modules as find_node_modules } from 'vite-plugin-utils/function'
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const require = createRequire(import.meta.url)
-const builtins = builtinModules.filter(m => !m.startsWith('_')); builtins.push(...builtins.map(m => `node:${m}`))
-const electronBuiltins = ['electron', ...builtins]
-const PACKAGE_PATH = path.join(__dirname, '..')
-const BUILTIN_PATH = 'vite-plugin-electron-renderer/builtins'
-const RESOLVE_PATH = 'vite-plugin-electron-renderer/.resolve'
+const builtins = builtinModules.filter(m => !m.startsWith('_'));
+const electronBuiltins = [
+  'electron',
+  ...builtins,
+  ...builtins.map(module => `node:${module}`),
+]
+
+const electron = `
+const electron = typeof require !== 'undefined'
+  // All exports module see https://www.electronjs.org -> API -> Renderer Process Modules
+  ? (function requireElectron() {
+    const avoid_parse_require = require;
+    return avoid_parse_require("electron");
+  }())
+  : (function nodeIntegrationWarn() {
+    console.error(\`If you need to use "electron" in the Renderer process, make sure that "nodeIntegration" is enabled in the Main process.\`);
+    return {
+      // TODO: polyfill
+    };
+  }());
+
+// Proxy in Worker
+let _ipcRenderer;
+if (typeof document === 'undefined') {
+  _ipcRenderer = {};
+  const keys = [
+    'invoke',
+    'postMessage',
+    'send',
+    'sendSync',
+    'sendTo',
+    'sendToHost',
+    // propertype
+    'addListener',
+    'emit',
+    'eventNames',
+    'getMaxListeners',
+    'listenerCount',
+    'listeners',
+    'off',
+    'on',
+    'once',
+    'prependListener',
+    'prependOnceListener',
+    'rawListeners',
+    'removeAllListeners',
+    'removeListener',
+    'setMaxListeners',
+  ];
+  for (const key of keys) {
+    _ipcRenderer[key] = () => {
+      throw new Error(
+        'ipcRenderer doesn\\'t work in a Web Worker.\\n' +
+        'You can see https://github.com/electron-vite/vite-plugin-electron/issues/69'
+      );
+    };
+  }
+} else {
+  _ipcRenderer = electron.ipcRenderer;
+}
+
+export { electron as default };
+export const clipboard = electron.clipboard;
+export const contextBridge = electron.contextBridge;
+export const crashReporter = electron.crashReporter;
+export const ipcRenderer = _ipcRenderer;
+export const nativeImage = electron.nativeImage;
+export const shell = electron.shell;
+export const webFrame = electron.webFrame;
+export const deprecate = electron.deprecate;
+`.trim()
 
 export interface RendererOptions {
   /**
@@ -40,14 +105,23 @@ export interface RendererOptions {
    * @experimental
    */
   resolve?: {
-    [id: string]: (() => string | { platform: 'browser' | 'node' } | Promise<string | { platform: 'browser' | 'node' }>)
+    [id: string]: (() => string | { platform: 'node' } | Promise<string | { platform: 'node' }>)
   }
 }
 
 export default function renderer(options: RendererOptions = {}): VitePlugin {
+  let cacheDir: string
+  const moduleCache = new Map<string, string>()
+  const resolveKeys = Object.keys(options.resolve ?? {})
+
   return {
     name: 'vite-plugin-electron-renderer',
     async config(config) {
+      cacheDir = path.join(
+        find_node_modules(config.root ?? process.cwd())?.[0] ?? process.cwd(),
+        '.vite-electron-renderer',
+      )
+
       // Make sure that Electron can be loaded into the local file using `loadFile()` after package
       config.base ??= './'
 
@@ -60,15 +134,46 @@ export default function renderer(options: RendererOptions = {}): VitePlugin {
       // ② Avoid not being able to set - https://github.com/rollup/plugins/blob/commonjs-v24.0.0/packages/commonjs/src/helpers.js#L55-L60
       withIgnore(config.build)
 
-      const resolveAliases = await buildResolve(options)
-      const builtinAliases: Alias[] = electronBuiltins
-        .filter(m => !m.startsWith('node:'))
-        .map<Alias>(m => ({
-          find: new RegExp(`^(node:)?${m}$`),
-          // Vite's pre-bundle only recognizes bare-import
-          replacement: `${BUILTIN_PATH}/${m}`,
-          // TODO: must be use absolute path for `pnnpm` monorepo - `shamefully-hoist=true` 🤔
-        }))
+      const aliases: Alias[] = [{
+        find: new RegExp(`^(?:node:)?(${['electron', ...builtins, ...resolveKeys].join('|')})$`),
+        // https://github.com/rollup/plugins/blob/alias-v5.0.0/packages/alias/src/index.ts#L90
+        replacement: '$1',
+        async customResolver(source) {
+          let id = moduleCache.get(source)
+          if (!id) {
+            id = path.join(cacheDir, source) + '.mjs'
+
+            if (!fs.existsSync(id)) {
+              let snippets: string
+
+              if (source === 'electron') {
+                snippets = electron
+              } else if (builtins.includes(source)) {
+                snippets = getSnippets(source)
+              } else {
+                const result = await options.resolve?.[source]()
+                if (result && typeof result === 'object' && result.platform === 'node') {
+                  snippets = getSnippets(source)
+                } else {
+                  snippets = result as string // any type
+                }
+              }
+
+              ensureDir(path.dirname(id))
+              fs.writeFileSync(id, snippets)
+
+              console.log(
+                COLOURS.gary('[electron-renderer]'),
+                COLOURS.cyan('pre-bundling'),
+                COLOURS.yellow(source),
+              )
+            }
+
+            moduleCache.set(source, id)
+          }
+          return { id }
+        },
+      }]
 
       // Why is the builtin modules loaded by modifying `resolve.alias` instead of using the plugin `resolveId` + `load` hooks?
       // `resolve.alias` has a very high priority in Vite! it works on Pre-Bundling, build, serve, ssr etc. anywhere
@@ -76,7 +181,7 @@ export default function renderer(options: RendererOptions = {}): VitePlugin {
       // ① Alias priority - https://github.com/vitejs/vite/blob/v4.2.0/packages/vite/src/node/plugins/index.ts#L45
       // ② Use in Pre-Bundling - https://github.com/vitejs/vite/blob/v4.2.0/packages/vite/src/node/optimizer/esbuildDepPlugin.ts#L199
       // ③ Worker does not share plugins - https://github.com/vitejs/vite/blob/v4.2.0/packages/vite/src/node/config.ts#L253-L256
-      modifyAlias(config, [...resolveAliases, ...builtinAliases])
+      modifyAlias(config, aliases)
     },
   }
 }
@@ -123,40 +228,11 @@ function modifyAlias(config: UserConfig, aliases: Alias[]) {
   (config.resolve.alias as Alias[]).push(...aliases)
 }
 
-async function buildResolve(options: RendererOptions) {
-  const aliases: Alias[] = []
-
-  for (const [name, resolveFn] of Object.entries(options.resolve ?? {})) {
-    let snippets: string | undefined
-
-    const result = await resolveFn()
-    if (typeof result === 'string') {
-      snippets = result
-    } else if (result && typeof result === 'object' && result.platform === 'node') {
-      const { exports } = libEsm({ exports: Object.getOwnPropertyNames(/* await import */require(name)) })
-      snippets = `
-// If a module is a CommonJs, use the \`require()\` load it can bring better performance, 
-// especially it is a C/C++ module, this can avoid a lot of trouble.
-const avoid_parse_require = require; const _M_ = avoid_parse_require("${name}");
-${exports}
-`.trim()
-    }
-
-    if (!snippets) continue
-
-    const resolvePath = path.join(PACKAGE_PATH, '.resolve', name)
-    if (!fs.existsSync(/* reuse cache */resolvePath)) {
-      ensureDir(path.dirname(resolvePath))
-      fs.writeFileSync(resolvePath + '.mjs', snippets)
-    }
-
-    aliases.push({
-      find: name,
-      replacement: `${RESOLVE_PATH}/${name}`,
-    })
-  }
-
-  return aliases
+function getSnippets(module: string) {
+  const { exports } = libEsm({ exports: Object.getOwnPropertyNames(/* not await import */require(module)) })
+  // If a module is a CommonJs, use the \`require()\` load it can bring better performance, 
+  // especially it is a C/C++ module, this can avoid a lot of trouble.
+  return `const avoid_parse_require = require; const _M_ = avoid_parse_require("${module}");\n${exports}`
 }
 
 function ensureDir(dirname: string) {
