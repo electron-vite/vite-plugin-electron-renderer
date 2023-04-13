@@ -46,7 +46,7 @@ export default {
 }
 ```
 
-2. Using the third-part C/C++ package in the Renderer process.
+2. Using the third-part C/C++, `esm` package in the Renderer process.
 
 ```js
 import renderer from 'vite-plugin-electron-renderer'
@@ -55,7 +55,10 @@ export default {
   plugins: [
     renderer({
       resolve: {
-        serialport: () => ({ platform: 'node' }), // specify as `node` platform
+        // C/C++ modules must be pre-bundle
+        serialport: { type: 'cjs' },
+        // `esm` modules only if Vite does not pre-bundle them correctly
+        got: { type: 'esm' },
       },
     }),
   ],
@@ -69,26 +72,22 @@ export default {
 ```ts
 export interface RendererOptions {
   /**
-   * Explicitly tell Vite how to load modules, which is very useful for C/C++ modules.  
-   * Most of the time, you don't need to use it when a module is a C/C++ module, you can load them by return `{ platform: 'node' }`.  
+   * Explicitly tell Vite how to load modules, which is very useful for C/C++ and `esm` modules
    * 
-   * If you know exactly how Vite works, you can customize the return snippets.  
-   * 
-   * ```js
-   * renderer({
-   *   resolve: {
-   *     // Use the serialport(C/C++) module as an example
-   *     serialport: () => ({ platform: 'node' }),
-   *     // Equivalent to
-   *     serialport: () => `const lib = require("serialport"); export default lib.default || lib;`,
-   *   },
-   * })
-   * ```
+   * - `type.cjs` just wraps esm-interop
+   * - `type.esm` pre-bundle to `cjs` and wraps esm-interop
    * 
    * @experimental
    */
   resolve?: {
-    [id: string]: (() => string | { platform: 'browser' | 'node' } | Promise<string | { platform: 'browser' | 'node' }>)
+    [module: string]: {
+      type: 'cjs' | 'esm',
+      /** Full custom how to pre-bundle */
+      build?: (args: {
+        cjs: (module: string) => Promise<string>,
+        esm: (module: string, buildOptions?: import('esbuild').BuildOptions) => Promise<string>,
+      }) => Promise<string>
+    }
   }
 }
 ```
