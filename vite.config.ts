@@ -5,10 +5,12 @@ import { builtinModules } from 'node:module'
 import { defineConfig } from 'vite'
 import pkg from './package.json'
 
+const isdev = process.argv.slice(2).includes('--watch')
+
 export default defineConfig({
   build: {
     minify: false,
-    emptyOutDir: false,
+    emptyOutDir: !isdev,
     lib: {
       entry: {
         index: 'src/index.ts',
