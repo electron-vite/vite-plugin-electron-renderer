@@ -1,5 +1,36 @@
 ## 0.13.14 (2023-03-31)
 
+#### Break!
+
+```diff
+export interface RendererOptions {
+  resolve?: {
+-   [id: string]: (() => string | { platform: 'browser' | 'node' } | Promise<string | { platform: 'browser' | 'node' }>)
++   [module: string]: {
++     type: 'cjs' | 'esm',
++     build?: (args: {
++       cjs: (module: string) => Promise<string>,
++       esm: (module: string, buildOptions?: import('esbuild').BuildOptions) => Promise<string>,
++     }) => Promise<string>
++   }
+  }
+}
+```
+
+#### Main Changed
+
+1. on-demand pre-bundle builtin, third-part C/C++, `esm` modules
+2. support full custom pre-bundle
+
+- 98c4d27 docs: v0.14.0
+- af6bb2b chore(examples): update quick-start
+- 110c854 chore: better build script
+- cd1b5bb chore: remove `.npmrc`
+- b8038f5 refactor(v0.14.0): better `options.resolve`
+- 7c5afae refactor(v0.14.0): on-demand pre-bundle
+
+## 0.13.14 (2023-03-31)
+
 - c68d26a fix: move cjs config to cjs-shim.ts #107 | [electron-vite-vue/issues/107](https://github.com/electron-vite/electron-vite-vue/issues/107)
 
 ## 0.13.13 (2023-03-29)
