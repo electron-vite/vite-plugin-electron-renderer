@@ -9,7 +9,8 @@ export default defineConfig({
     }),
     renderer({
       resolve: {
-        serialport: () => ({ platform: 'node' }),
+        serialport: { type: 'cjs' },
+        got: { type: 'esm' },
       },
     }),
   ],

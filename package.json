@@ -1,6 +1,6 @@
 {
   "name": "vite-plugin-electron-renderer",
-  "version": "0.13.14",
+  "version": "0.14.0",
   "description": "Support use Node.js API in Electron-Renderer",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -23,7 +23,6 @@
     "build": "vite build",
     "types": "tsc --emitDeclarationOnly",
     "prepublishOnly": "npm run test && npm run build",
-    "postinstall": "node install.js",
     "test": "vitest run"
   },
   "dependencies": {
@@ -34,6 +33,7 @@
     "rollup": "^3.19.1",
     "typescript": "^5.0.2",
     "vite": "^4.2.0",
+    "vite-plugin-utils": "^0.4.0",
     "vitest": "^0.29.3"
   },
   "files": [
