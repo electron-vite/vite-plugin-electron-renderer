@@ -33,7 +33,7 @@
     "rollup": "^3.19.1",
     "typescript": "^5.0.2",
     "vite": "^4.2.0",
-    "vite-plugin-utils": "^0.4.0",
+    "vite-plugin-utils": "^0.4.1",
     "vitest": "^0.29.3"
   },
   "files": [

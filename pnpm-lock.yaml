@@ -21,8 +21,8 @@ importers:
         specifier: ^4.2.0
         version: 4.2.0(@types/node@18.11.9)
       vite-plugin-utils:
-        specifier: ^0.4.0
-        version: 0.4.0
+        specifier: ^0.4.1
+        version: 0.4.1
       vitest:
         specifier: ^0.29.3
         version: 0.29.3
@@ -3405,8 +3405,8 @@ packages:
     resolution: {integrity: sha512-pi9Wy4KCGjKIRvp7/5VUOT8BYEAJdZrpy3gI+GhGc5vYs2V9yPxLOtfCqNfSTYqH3uM6hYY6MyifFVku3Wg+2A==}
     dev: true
 
-  /vite-plugin-utils@0.4.0:
-    resolution: {integrity: sha512-UZ9hkvRtKXIvQdjozVhUvD+/f2LOoEw3VbJBCWOvchKlzmjGrNULc4ZA/gfpedtjxjxq2tO6WBhrwtoevLnIWg==}
+  /vite-plugin-utils@0.4.1:
+    resolution: {integrity: sha512-Q9j8UwdlUK5Ci2yTVbCXX1skS3NX7G5QkkVimp7UTGrgJHZx0RAqzg4VGlUaFT1OCmq4jtyTjdh1jN7M769bPA==}
     dev: true
 
   /vite@4.0.3:
