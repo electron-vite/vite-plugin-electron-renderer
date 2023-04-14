@@ -109,46 +109,22 @@ export interface RendererOptions {
 
 export default function renderer(options: RendererOptions = {}): VitePlugin {
   let cacheDir: string
-  const moduleCache = new Map<string, string>()
   const resolveKeys: string[] = []
+  const moduleCache = new Map<string, string>()
 
   return {
     name: 'vite-plugin-electron-renderer',
     async config(config, { command }) {
-      // Make sure that Electron can be loaded into the local file using `loadFile()` after package
-      config.base ??= './'
-
-      config.build ??= {}
-      config.build.rollupOptions ??= {}
-
-      // Some third-party modules, such as `fs-extra`, it will extend the nativ fs module, maybe we need to stop it
-      // ① Avoid freeze Object
-      setOutputFreeze(config.build.rollupOptions)
-      // ② Avoid not being able to set - https://github.com/rollup/plugins/blob/commonjs-v24.0.0/packages/commonjs/src/helpers.js#L55-L60
-      withIgnore(config.build, electronBuiltins)
-
-      // ---------------------------------------------------------------------------------------------------
-
       cacheDir = path.join(
         find_node_modules(config.root ?? process.cwd())?.[0] ?? process.cwd(),
         CACHE_DIR,
       )
-
       for (const [key, option] of Object.entries(options.resolve ?? {})) {
         if (command === 'build' && option.type === 'esm') {
           // A `esm` module can be build correctly during the `vite build`
           continue
         }
         resolveKeys.push(key)
-      }
-
-      config.optimizeDeps ??= {}
-      config.optimizeDeps.exclude ??= []
-      for (const key of resolveKeys) {
-        if (!config.optimizeDeps.exclude.includes(key)) {
-          // Avoid Vite secondary pre-bundle
-          config.optimizeDeps.exclude.push(key)
-        }
       }
 
       // builtins
@@ -240,8 +216,26 @@ export default function renderer(options: RendererOptions = {}): VitePlugin {
       // ② Use in Pre-Bundling - https://github.com/vitejs/vite/blob/v4.2.0/packages/vite/src/node/optimizer/esbuildDepPlugin.ts#L199
       // ③ Worker does not share plugins - https://github.com/vitejs/vite/blob/v4.2.0/packages/vite/src/node/config.ts#L253-L256
       modifyAlias(config, aliases)
+
+      modifyOptimizeDeps(config, resolveKeys)
+
+      adaptElectron(config)
     },
   }
+}
+
+function adaptElectron(config: UserConfig) {
+  // Make sure that Electron can be loaded into the local file using `loadFile()` after package
+  config.base ??= './'
+
+  config.build ??= {}
+  config.build.rollupOptions ??= {}
+
+  // Some third-party modules, such as `fs-extra`, it will extend the nativ fs module, maybe we need to stop it
+  // ① Avoid freeze Object
+  setOutputFreeze(config.build.rollupOptions)
+  // ② Avoid not being able to set - https://github.com/rollup/plugins/blob/commonjs-v24.0.0/packages/commonjs/src/helpers.js#L55-L60
+  withIgnore(config.build, electronBuiltins)
 }
 
 function setOutputFreeze(rollupOptions: RollupOptions) {
@@ -272,6 +266,17 @@ function withIgnore(configBuild: BuildOptions, modules: string[]) {
     }
   } else {
     configBuild.commonjsOptions.ignore = modules
+  }
+}
+
+function modifyOptimizeDeps(config: UserConfig, exclude: string[]) {
+  config.optimizeDeps ??= {}
+  config.optimizeDeps.exclude ??= []
+  for (const str of exclude) {
+    if (!config.optimizeDeps.exclude.includes(str)) {
+      // Avoid Vite secondary pre-bundle
+      config.optimizeDeps.exclude.push(str)
+    }
   }
 }
 
