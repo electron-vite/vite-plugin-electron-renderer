@@ -1,3 +1,10 @@
+## 0.14.1 (2023-04-15)
+
+- ffef5f2 chore: bump vite-plugin-utils to 0.4.1
+- 7d8471e chore: add comments
+- 4d50e2f fix: better `.cjs` file import path #60
+- 274cf00 chore(v0.14.1): cleanup
+
 ## 0.14.0 (2023-04-13)
 
 #### Break!

@@ -7,10 +7,15 @@ import type {
   Plugin as VitePlugin,
   UserConfig,
 } from 'vite'
+import { normalizePath } from 'vite'
 import esbuild from 'esbuild'
 import type { RollupOptions } from 'rollup'
 import libEsm from 'lib-esm'
-import { COLOURS, node_modules as find_node_modules } from 'vite-plugin-utils/function'
+import {
+  COLOURS,
+  node_modules as find_node_modules,
+  relativeify,
+} from 'vite-plugin-utils/function'
 
 const require = createRequire(import.meta.url)
 const builtins = builtinModules.filter(m => !m.startsWith('_'));
@@ -23,7 +28,7 @@ const CACHE_DIR = '.vite-electron-renderer'
 
 const electron = `
 const electron = typeof require !== 'undefined'
-  // All exports module see https://www.electronjs.org -> API -> Renderer Process Modules
+  // All exports module see https://www.electronjs.org -> API -> Renderer process Modules
   ? (function requireElectron() {
     const avoid_parse_require = require;
     return avoid_parse_require("electron");
@@ -108,31 +113,19 @@ export interface RendererOptions {
 }
 
 export default function renderer(options: RendererOptions = {}): VitePlugin {
+  let root: string
   let cacheDir: string
-  const moduleCache = new Map<string, string>()
+  const cwd = process.cwd()
   const resolveKeys: string[] = []
+  const moduleCache = new Map<string, string>()
 
   return {
     name: 'vite-plugin-electron-renderer',
     async config(config, { command }) {
-      // Make sure that Electron can be loaded into the local file using `loadFile()` after package
-      config.base ??= './'
+      // https://github.com/vitejs/vite/blob/v4.2.1/packages/vite/src/node/config.ts#L469-L472
+      root = normalizePath(config.root ? path.resolve(config.root) : cwd)
 
-      config.build ??= {}
-      config.build.rollupOptions ??= {}
-
-      // Some third-party modules, such as `fs-extra`, it will extend the nativ fs module, maybe we need to stop it
-      // ① Avoid freeze Object
-      setOutputFreeze(config.build.rollupOptions)
-      // ② Avoid not being able to set - https://github.com/rollup/plugins/blob/commonjs-v24.0.0/packages/commonjs/src/helpers.js#L55-L60
-      withIgnore(config.build, electronBuiltins)
-
-      // ---------------------------------------------------------------------------------------------------
-
-      cacheDir = path.join(
-        find_node_modules(config.root ?? process.cwd())?.[0] ?? process.cwd(),
-        CACHE_DIR,
-      )
+      cacheDir = path.join(find_node_modules(root)[0] ?? cwd, CACHE_DIR)
 
       for (const [key, option] of Object.entries(options.resolve ?? {})) {
         if (command === 'build' && option.type === 'esm') {
@@ -140,15 +133,6 @@ export default function renderer(options: RendererOptions = {}): VitePlugin {
           continue
         }
         resolveKeys.push(key)
-      }
-
-      config.optimizeDeps ??= {}
-      config.optimizeDeps.exclude ??= []
-      for (const key of resolveKeys) {
-        if (!config.optimizeDeps.exclude.includes(key)) {
-          // Avoid Vite secondary pre-bundle
-          config.optimizeDeps.exclude.push(key)
-        }
       }
 
       // builtins
@@ -193,16 +177,21 @@ export default function renderer(options: RendererOptions = {}): VitePlugin {
                 if (typeof resolved.build === 'function') {
                   snippets = await resolved.build({
                     cjs: module => Promise.resolve(getSnippets({ import: module, export: module })),
-                    esm: (module, buildOptions) => getPreBundleSnippets(
+                    esm: (module, buildOptions) => getPreBundleSnippets({
+                      root,
                       module,
-                      cacheDir,
+                      outdir: cacheDir,
                       buildOptions,
-                    ),
+                    }),
                   })
                 } else if (resolved.type === 'cjs') {
                   snippets = getSnippets({ import: source, export: source })
                 } else if (resolved.type === 'esm') {
-                  snippets = await getPreBundleSnippets(source, cacheDir)
+                  snippets = await getPreBundleSnippets({
+                    root,
+                    module: source,
+                    outdir: cacheDir,
+                  })
                 }
 
                 console.log(
@@ -240,8 +229,26 @@ export default function renderer(options: RendererOptions = {}): VitePlugin {
       // ② Use in Pre-Bundling - https://github.com/vitejs/vite/blob/v4.2.0/packages/vite/src/node/optimizer/esbuildDepPlugin.ts#L199
       // ③ Worker does not share plugins - https://github.com/vitejs/vite/blob/v4.2.0/packages/vite/src/node/config.ts#L253-L256
       modifyAlias(config, aliases)
+
+      modifyOptimizeDeps(config, resolveKeys)
+
+      adaptElectron(config)
     },
   }
+}
+
+function adaptElectron(config: UserConfig) {
+  // Make sure that Electron can be loaded into the local file using `loadFile()` after package
+  config.base ??= './'
+
+  config.build ??= {}
+  config.build.rollupOptions ??= {}
+
+  // Some third-party modules, such as `fs-extra`, it will extend the nativ fs module, maybe we need to stop it
+  // ① Avoid freeze Object
+  setOutputFreeze(config.build.rollupOptions)
+  // ② Avoid not being able to set - https://github.com/rollup/plugins/blob/commonjs-v24.0.0/packages/commonjs/src/helpers.js#L55-L60
+  withIgnore(config.build, electronBuiltins)
 }
 
 function setOutputFreeze(rollupOptions: RollupOptions) {
@@ -275,6 +282,17 @@ function withIgnore(configBuild: BuildOptions, modules: string[]) {
   }
 }
 
+function modifyOptimizeDeps(config: UserConfig, exclude: string[]) {
+  config.optimizeDeps ??= {}
+  config.optimizeDeps.exclude ??= []
+  for (const str of exclude) {
+    if (!config.optimizeDeps.exclude.includes(str)) {
+      // Avoid Vite secondary pre-bundle
+      config.optimizeDeps.exclude.push(str)
+    }
+  }
+}
+
 function modifyAlias(config: UserConfig, aliases: Alias[]) {
   config.resolve ??= {}
   config.resolve.alias ??= []
@@ -299,11 +317,19 @@ function getSnippets(module: {
   return `const avoid_parse_require = require; const _M_ = avoid_parse_require("${module.export}");\n${exports}`
 }
 
-async function getPreBundleSnippets(
-  module: string,
-  outdir: string,
-  buildOptions: esbuild.BuildOptions = {},
-) {
+async function getPreBundleSnippets(options: {
+  root: string
+  module: string
+  outdir: string
+  buildOptions?: esbuild.BuildOptions
+}) {
+  const {
+    root,
+    module,
+    outdir,
+    buildOptions = {},
+  } = options
+
   const outfile = path.join(outdir, module) + '.cjs'
   await esbuild.build({
     entryPoints: [module],
@@ -319,9 +345,9 @@ async function getPreBundleSnippets(
 
   return getSnippets({
     import: outfile,
-    // 🐞 `require("./${module}.cjs")` can not works under the `import`,
-    // the `require("${CACHE_DIR}/${module}.cjs")` to represent the bare-module in `node_modules`
-    export: `${CACHE_DIR}/${module}.cjs`,
+    // Since any module will be imported as an `import` in the Renderer process,
+    // the __dirname(import.meta.url) of the module should be http://localhost:5173/ which is the `root` directory
+    export: relativeify(path.posix.relative(root, outfile)),
   })
 }
 
