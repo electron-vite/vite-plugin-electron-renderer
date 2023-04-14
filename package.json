@@ -37,8 +37,7 @@
     "vitest": "^0.29.3"
   },
   "files": [
-    "dist",
-    "install.js"
+    "dist"
   ],
   "keywords": [
     "vite",

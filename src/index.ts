@@ -130,7 +130,7 @@ export default function renderer(options: RendererOptions = {}): VitePlugin {
       for (const [key, option] of Object.entries(options.resolve ?? {})) {
         if (command === 'build' && option.type === 'esm') {
           // A `esm` module can be build correctly during the `vite build`
-          continue
+          continue // (🚧-① only `type:cjs`)
         }
         resolveKeys.push(key)
       }
@@ -159,7 +159,7 @@ export default function renderer(options: RendererOptions = {}): VitePlugin {
         },
       }]
 
-      // options.resolve (only `cjs`)
+      // options.resolve (🚧-① only `type:cjs`)
       aliases.push({
         find: new RegExp(`^(${resolveKeys.join('|')})$`),
         replacement: '$1',
@@ -346,7 +346,7 @@ async function getPreBundleSnippets(options: {
   return getSnippets({
     import: outfile,
     // Since any module will be imported as an `import` in the Renderer process,
-    // the __dirname(import.meta.url) of the module should be http://localhost:5173/ which is the `root` directory
+    // the __dirname(import.meta.url) of the module should be `http://localhost:5173/` which is the `root` directory
     export: relativeify(path.posix.relative(root, outfile)),
   })
 }
