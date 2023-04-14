@@ -47,6 +47,7 @@ export default function cjsShim(): Plugin {
 
       if (assetsDir) {
         // ---------------------------------------- shim-require-id
+        // TODO: https://github.com/electron-vite/vite-plugin-electron-renderer/blob/v0.14.1/src/index.ts#L348-L349
         const requireIdShim = `<script id="shim-require-id">
 ; (function () {
   if (typeof require !== 'function') return;
