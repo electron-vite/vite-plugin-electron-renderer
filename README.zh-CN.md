@@ -64,7 +64,7 @@ export default (lib.default || lib);
 [这里解释了它](https://github.com/electron-vite/vite-plugin-electron/blob/14684ba108beec305edf4c9d8865527f6508f987/examples/nodeIntegration/vite.config.ts#L36-L39)
 -->
 
-## `dependencies` 与 `devDependencies`
+## dependencies 与 devDependencies
 
 <table>
   <thead>
