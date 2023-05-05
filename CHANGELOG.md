@@ -1,3 +1,12 @@
+## 0.14.2 (2023-05-05)
+
+- 6930c08 v0.14.2
+- d99bec7 feat(build): target `node14`
+- af15ae0 fix: correct lookup path for `require()` #63 | closes [#63]https://github.com/electron-vite/vite-plugin-electron-renderer/issues/63
+- 69a6a0b chore: cleanup
+- ef1f57e docs: update
+- dd3e052 chore: cleanup
+
 ## 0.14.1 (2023-04-15)
 
 - ffef5f2 chore: bump vite-plugin-utils to 0.4.1
