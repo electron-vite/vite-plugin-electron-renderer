@@ -178,7 +178,6 @@ export default function renderer(options: RendererOptions = {}): VitePlugin {
                   snippets = await resolved.build({
                     cjs: module => Promise.resolve(getSnippets({ import: module, export: module })),
                     esm: (module, buildOptions) => getPreBundleSnippets({
-                      root,
                       module,
                       outdir: cacheDir,
                       buildOptions,
@@ -188,7 +187,6 @@ export default function renderer(options: RendererOptions = {}): VitePlugin {
                   snippets = getSnippets({ import: source, export: source })
                 } else if (resolved.type === 'esm') {
                   snippets = await getPreBundleSnippets({
-                    root,
                     module: source,
                     outdir: cacheDir,
                   })
@@ -318,13 +316,11 @@ function getSnippets(module: {
 }
 
 async function getPreBundleSnippets(options: {
-  root: string
   module: string
   outdir: string
   buildOptions?: esbuild.BuildOptions
 }) {
   const {
-    root,
     module,
     outdir,
     buildOptions = {},
@@ -345,9 +341,8 @@ async function getPreBundleSnippets(options: {
 
   return getSnippets({
     import: outfile,
-    // Since any module will be imported as an `import` in the Renderer process,
-    // the __dirname(import.meta.url) of the module should be `http://localhost:5173/` which is the `root` directory
-    export: relativeify(path.posix.relative(root, outfile)),
+    // `require()` in script-module lookup path based on `process.cwd()` 🤔
+    export: relativeify(path.posix.relative(process.cwd(), outfile)),
   })
 }
 
