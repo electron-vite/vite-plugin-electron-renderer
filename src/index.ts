@@ -115,7 +115,6 @@ export interface RendererOptions {
 export default function renderer(options: RendererOptions = {}): VitePlugin {
   let root: string
   let cacheDir: string
-  const cwd = process.cwd()
   const resolveKeys: string[] = []
   const moduleCache = new Map<string, string>()
 
@@ -123,14 +122,15 @@ export default function renderer(options: RendererOptions = {}): VitePlugin {
     name: 'vite-plugin-electron-renderer',
     async config(config, { command }) {
       // https://github.com/vitejs/vite/blob/v4.2.1/packages/vite/src/node/config.ts#L469-L472
-      root = normalizePath(config.root ? path.resolve(config.root) : cwd)
+      root = normalizePath(config.root ? path.resolve(config.root) : process.cwd())
 
-      cacheDir = path.join(find_node_modules(root)[0] ?? cwd, CACHE_DIR)
+      cacheDir = path.join(find_node_modules(root)[0] ?? process.cwd(), CACHE_DIR)
 
       for (const [key, option] of Object.entries(options.resolve ?? {})) {
         if (command === 'build' && option.type === 'esm') {
           // A `esm` module can be build correctly during the `vite build`
-          continue
+          // Because the current C/C++ modules are imported through `cjs` format, so exclude `esm`
+          continue // (🚧-① only `type:cjs`)
         }
         resolveKeys.push(key)
       }
@@ -159,7 +159,7 @@ export default function renderer(options: RendererOptions = {}): VitePlugin {
         },
       }]
 
-      // options.resolve (only `cjs`)
+      // options.resolve (🚧-① only `type:cjs`)
       aliases.push({
         find: new RegExp(`^(${resolveKeys.join('|')})$`),
         replacement: '$1',
@@ -178,7 +178,6 @@ export default function renderer(options: RendererOptions = {}): VitePlugin {
                   snippets = await resolved.build({
                     cjs: module => Promise.resolve(getSnippets({ import: module, export: module })),
                     esm: (module, buildOptions) => getPreBundleSnippets({
-                      root,
                       module,
                       outdir: cacheDir,
                       buildOptions,
@@ -188,7 +187,6 @@ export default function renderer(options: RendererOptions = {}): VitePlugin {
                   snippets = getSnippets({ import: source, export: source })
                 } else if (resolved.type === 'esm') {
                   snippets = await getPreBundleSnippets({
-                    root,
                     module: source,
                     outdir: cacheDir,
                   })
@@ -318,13 +316,11 @@ function getSnippets(module: {
 }
 
 async function getPreBundleSnippets(options: {
-  root: string
   module: string
   outdir: string
   buildOptions?: esbuild.BuildOptions
 }) {
   const {
-    root,
     module,
     outdir,
     buildOptions = {},
@@ -345,9 +341,8 @@ async function getPreBundleSnippets(options: {
 
   return getSnippets({
     import: outfile,
-    // Since any module will be imported as an `import` in the Renderer process,
-    // the __dirname(import.meta.url) of the module should be http://localhost:5173/ which is the `root` directory
-    export: relativeify(path.posix.relative(root, outfile)),
+    // `require()` in script-module lookup path based on `process.cwd()` 🤔
+    export: relativeify(path.posix.relative(process.cwd(), outfile)),
   })
 }
 

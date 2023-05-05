@@ -140,26 +140,27 @@ const { ipcRenderer } = require('electron')
 ```
 -->
 
-<!--
 ## Dependency Pre-Bundling
 
-**In general**. Vite will pre-bundle all third-party modules in a Web-based usage format, but it can not adapt to Electron Renderer process especially C/C++ modules. So we must be make a little changes for this.  
-When a module detected as a `cjs` module. it will be pre-bundle like the following.
+**In general**. Vite will pre-bundle all third-party modules in a Web-based usage format, but it can not adapt to Electron Renderer process especially C/C++ modules. So we must be make a little changes for this.
+
+<!-- When a module detected as a `cjs` module. it will be pre-bundle like the following. -->
 
 ```js
-const lib = require("cjs-module");
+// 👉 https://github.com/electron-vite/vite-plugin-electron-renderer/blob/v0.13.0/src/optimizer.ts#L139-L142
+const _M_ = require("serialport");
 
-export const member = lib.member;
-export default (lib.default || lib);
+export default (_M_.default || _M_);
+export const SerialPort = _M_.SerialPort;
+// export other members ...
 ```
 
-[See source code](https://github.com/electron-vite/vite-plugin-electron-renderer/blob/v0.13.0/src/optimizer.ts#L139-L142)
-
+<!--
 **By the way**. If an npm package is a pure ESM format package, and the packages it depends on are also in ESM format, then put it in `optimizeDeps.exclude` and it will work normally.  
 [See the explanation](https://github.com/electron-vite/vite-plugin-electron-renderer/blob/v0.10.3/examples/quick-start/vite.config.ts#L33-L36)
 -->
 
-## `dependencies` vs `devDependencies`
+## dependencies vs devDependencies
 
 <table>
   <thead>
