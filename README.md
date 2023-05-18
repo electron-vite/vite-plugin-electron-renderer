@@ -46,7 +46,7 @@ export default {
 }
 ```
 
-2. Using the third-part C/C++, `esm` package in the Renderer process.
+2. Using the third-part `C/C++`, `esm` package in the Renderer process.
 
 ```js
 import renderer from 'vite-plugin-electron-renderer'
@@ -64,6 +64,8 @@ export default {
   ],
 }
 ```
+
+> By the way, if a module is marked as `type: 'cjs'`, the plugin just loads it in using `require()`. So it should be put into `dependencies`.
 
 ## API *(Define)*
 
