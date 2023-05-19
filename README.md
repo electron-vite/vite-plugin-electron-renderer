@@ -65,6 +65,24 @@ export default {
 }
 ```
 
+3. Using packages with `browser` field in their `package.json` and `nodeIntegration: true` in Electron.
+
+```js
+import renderer from 'vite-plugin-electron-renderer'
+
+export default {
+  plugins: [
+    renderer({
+      resolve: {
+        // ws has a `browser` field in its `package.json`
+        ws: { type: 'cjs' },
+      },
+      browserField: false,
+    }),
+  ],
+}
+```
+
 ## API *(Define)*
 
 `renderer(options: RendererOptions)`
@@ -88,7 +106,9 @@ export interface RendererOptions {
         esm: (module: string, buildOptions?: import('esbuild').BuildOptions) => Promise<string>,
       }) => Promise<string>
     }
-  }
+  },
+  browserField?: boolean
+  mainFields?: string[]
 }
 ```
 

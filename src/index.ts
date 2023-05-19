@@ -109,7 +109,9 @@ export interface RendererOptions {
         esm: (module: string, buildOptions?: import('esbuild').BuildOptions) => Promise<string>,
       }) => Promise<string>
     }
-  }
+  },
+  browserField?: boolean,
+  mainFields?: string[],
 }
 
 export default function renderer(options: RendererOptions = {}): VitePlugin {
@@ -231,6 +233,8 @@ export default function renderer(options: RendererOptions = {}): VitePlugin {
       modifyOptimizeDeps(config, resolveKeys)
 
       adaptElectron(config)
+
+      appendBrowserField(config, options)
     },
   }
 }
@@ -247,6 +251,18 @@ function adaptElectron(config: UserConfig) {
   setOutputFreeze(config.build.rollupOptions)
   // ② Avoid not being able to set - https://github.com/rollup/plugins/blob/commonjs-v24.0.0/packages/commonjs/src/helpers.js#L55-L60
   withIgnore(config.build, electronBuiltins)
+}
+
+function appendBrowserField(config: UserConfig, options: RendererOptions) {
+  // If the user has specified a browser field then we need to assign it.
+  // It would be useful to use some packages with browser field in there package.json, such as `ws`, in electron with `nodeIntegration: true`
+  config.resolve ??= {}
+  if (options.browserField) {
+    config.resolve.browserField = options.browserField
+  }
+  if (options.mainFields) {
+    config.resolve.mainFields = options.mainFields
+  }
 }
 
 function setOutputFreeze(rollupOptions: RollupOptions) {
