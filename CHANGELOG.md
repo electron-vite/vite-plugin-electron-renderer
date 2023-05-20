@@ -1,3 +1,7 @@
+## 0.14.4 (2023-05-21)
+
+- fe221ec fix: move `lib-esm` to devDependencies | closes [electron-vite-react#149](https://github.com/electron-vite/electron-vite-react/issues/149)
+
 ## 0.14.3 (2023-05-20)
 
 - 6901413 chore: bump deps
