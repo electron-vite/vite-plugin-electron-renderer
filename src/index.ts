@@ -18,7 +18,7 @@ import {
 } from 'vite-plugin-utils/function'
 
 const require = createRequire(import.meta.url)
-const builtins = builtinModules.filter(m => !m.startsWith('_'));
+const builtins = builtinModules.filter(m => !m.startsWith('_'))
 const electronBuiltins = [
   'electron',
   ...builtins,
@@ -28,7 +28,8 @@ const CACHE_DIR = '.vite-electron-renderer'
 const TAG = '[electron-renderer]'
 const cwd = normalizePath(process.cwd())
 
-const electron = `
+/** Electron Renderer process code snippets */
+export const electron = `
 const electron = typeof require !== 'undefined'
   // All exports module see https://www.electronjs.org -> API -> Renderer process Modules
   ? (function requireElectron() {
@@ -162,7 +163,7 @@ export default function renderer(options: RendererOptions = {}): VitePlugin {
       }]
 
       // options.resolve (🚧-① only `type:cjs`)
-      aliases.push({
+      resolveKeys.length && aliases.push({
         find: new RegExp(`^(${resolveKeys.join('|')})$`),
         replacement: '$1',
         async customResolver(source, importer, resolveOptions) {
