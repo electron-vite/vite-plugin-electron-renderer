@@ -26,7 +26,7 @@ export default defineConfig({
         'vite',
         ...builtinModules,
         ...builtinModules.map(m => `node:${m}`),
-        ...Object.keys(pkg.dependencies),
+        ...Object.keys('dependencies' in pkg ? pkg.dependencies as object : {}),
       ],
       output: {
         exports: 'named',

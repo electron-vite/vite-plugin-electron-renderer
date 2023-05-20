@@ -3,10 +3,6 @@ lockfileVersion: '6.0'
 importers:
 
   .:
-    dependencies:
-      lib-esm:
-        specifier: ~0.4.0
-        version: 0.4.0
     devDependencies:
       electron:
         specifier: ^24.3.1
@@ -14,6 +10,9 @@ importers:
       esbuild:
         specifier: ^0.17.19
         version: 0.17.19
+      lib-esm:
+        specifier: ^0.4.0
+        version: 0.4.0
       node-fetch:
         specifier: ^3.3.1
         version: 3.3.1
@@ -2333,7 +2332,7 @@ packages:
 
   /lib-esm@0.4.0:
     resolution: {integrity: sha512-fJ3PXySful0FWYKfYtsjReTq4fQztzrQWx+pS9TPbpfDb5P/tCoRwEnezkVtFwKgzSavqeeOjgFEKjRXd8XeBg==}
-    dev: false
+    dev: true
 
   /local-pkg@0.4.3:
     resolution: {integrity: sha512-SFppqq5p42fe2qcZQqqEOiVRXl+WCP1MdT6k7BDEW1j++sp5fIY+/fdRQitvKgB5BrBcmrs5m/L0v2FrU5MY1g==}
