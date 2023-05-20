@@ -36,6 +36,8 @@ export default defineConfig({
   plugins: [{
     name: 'generate-types',
     async closeBundle() {
+      if (process.env.NODE_ENV === 'test') return
+
       removeTypes()
       await generateTypes()
       moveTypesToDist()

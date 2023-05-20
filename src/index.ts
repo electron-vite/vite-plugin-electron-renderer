@@ -18,15 +18,18 @@ import {
 } from 'vite-plugin-utils/function'
 
 const require = createRequire(import.meta.url)
-const builtins = builtinModules.filter(m => !m.startsWith('_'));
+const builtins = builtinModules.filter(m => !m.startsWith('_'))
 const electronBuiltins = [
   'electron',
   ...builtins,
   ...builtins.map(module => `node:${module}`),
 ]
 const CACHE_DIR = '.vite-electron-renderer'
+const TAG = '[electron-renderer]'
+const cwd = normalizePath(process.cwd())
 
-const electron = `
+/** Electron Renderer process code snippets */
+export const electron = `
 const electron = typeof require !== 'undefined'
   // All exports module see https://www.electronjs.org -> API -> Renderer process Modules
   ? (function requireElectron() {
@@ -122,9 +125,9 @@ export default function renderer(options: RendererOptions = {}): VitePlugin {
     name: 'vite-plugin-electron-renderer',
     async config(config, { command }) {
       // https://github.com/vitejs/vite/blob/v4.2.1/packages/vite/src/node/config.ts#L469-L472
-      root = normalizePath(config.root ? path.resolve(config.root) : process.cwd())
+      root = normalizePath(config.root ? path.resolve(config.root) : cwd)
 
-      cacheDir = path.join(find_node_modules(root)[0] ?? process.cwd(), CACHE_DIR)
+      cacheDir = path.posix.join(find_node_modules(root)[0] ?? cwd, CACHE_DIR)
 
       for (const [key, option] of Object.entries(options.resolve ?? {})) {
         if (command === 'build' && option.type === 'esm') {
@@ -143,7 +146,7 @@ export default function renderer(options: RendererOptions = {}): VitePlugin {
         async customResolver(source) {
           let id = moduleCache.get(source)
           if (!id) {
-            id = path.join(cacheDir, source) + '.mjs'
+            id = path.posix.join(cacheDir, source) + '.mjs'
 
             if (!fs.existsSync(id)) {
               ensureDir(path.dirname(id))
@@ -160,13 +163,13 @@ export default function renderer(options: RendererOptions = {}): VitePlugin {
       }]
 
       // options.resolve (🚧-① only `type:cjs`)
-      aliases.push({
+      resolveKeys.length && aliases.push({
         find: new RegExp(`^(${resolveKeys.join('|')})$`),
         replacement: '$1',
         async customResolver(source, importer, resolveOptions) {
           let id = moduleCache.get(source)
           if (!id) {
-            const filename = path.join(cacheDir, source) + '.mjs'
+            const filename = path.posix.join(cacheDir, source) + '.mjs'
             if (fs.existsSync(filename)) {
               id = filename
             } else {
@@ -193,13 +196,13 @@ export default function renderer(options: RendererOptions = {}): VitePlugin {
                 }
 
                 console.log(
-                  COLOURS.gary('[electron-renderer]'),
+                  COLOURS.gary(TAG),
                   COLOURS.cyan('pre-bundling'),
                   COLOURS.yellow(source),
                 )
 
                 ensureDir(path.dirname(filename))
-                fs.writeFileSync(filename, snippets ?? '/* empty */')
+                fs.writeFileSync(filename, snippets ?? `/* ${TAG}: empty */`)
                 id = filename
               } else {
                 id = source
@@ -326,7 +329,7 @@ async function getPreBundleSnippets(options: {
     buildOptions = {},
   } = options
 
-  const outfile = path.join(outdir, module) + '.cjs'
+  const outfile = path.posix.join(outdir, module) + '.cjs'
   await esbuild.build({
     entryPoints: [module],
     outfile,
@@ -342,7 +345,7 @@ async function getPreBundleSnippets(options: {
   return getSnippets({
     import: outfile,
     // `require()` in script-module lookup path based on `process.cwd()` 🤔
-    export: relativeify(path.posix.relative(process.cwd(), outfile)),
+    export: relativeify(path.posix.relative(cwd, outfile)),
   })
 }
 
