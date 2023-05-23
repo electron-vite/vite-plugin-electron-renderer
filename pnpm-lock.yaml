@@ -11,8 +11,8 @@ importers:
         specifier: ^0.17.19
         version: 0.17.19
       lib-esm:
-        specifier: ^0.4.0
-        version: 0.4.0
+        specifier: ^0.4.1
+        version: 0.4.1
       node-fetch:
         specifier: ^3.3.1
         version: 3.3.1
@@ -2330,8 +2330,8 @@ packages:
     resolution: {integrity: sha512-0/BnGCCfyUMkBpeDgWihanIAF9JmZhHBgUhEqzvf+adhNGLoP6TaiI5oF8oyb3I45P+PcnrqihSf01M0l0G5+Q==}
     dev: true
 
-  /lib-esm@0.4.0:
-    resolution: {integrity: sha512-fJ3PXySful0FWYKfYtsjReTq4fQztzrQWx+pS9TPbpfDb5P/tCoRwEnezkVtFwKgzSavqeeOjgFEKjRXd8XeBg==}
+  /lib-esm@0.4.1:
+    resolution: {integrity: sha512-tdSqfyryhnl5k09357x2iWmw3WeU84SaoP/vMGw/nw8z8RPTrfu9sxwRApn6p6GyStuBNyASgwXIV8ctZWlG1A==}
     dev: true
 
   /local-pkg@0.4.3:
