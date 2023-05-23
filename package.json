@@ -1,6 +1,6 @@
 {
   "name": "vite-plugin-electron-renderer",
-  "version": "0.14.4",
+  "version": "0.14.5",
   "description": "Support use Node.js API in Electron-Renderer",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -28,7 +28,7 @@
   "devDependencies": {
     "electron": "^24.3.1",
     "esbuild": "^0.17.19",
-    "lib-esm": "^0.4.0",
+    "lib-esm": "^0.4.1",
     "node-fetch": "^3.3.1",
     "rollup": "^3.22.0",
     "serialport": "^11.0.0",
