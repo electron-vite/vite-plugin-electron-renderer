@@ -1,5 +1,7 @@
 # vite-plugin-electron-renderer
 
+简而言之，`vite-plugin-electron-renderer` 职责是填充 Electron, Node.js 内置模块。
+
 [English](https://github.com/electron-vite/vite-plugin-electron-renderer#readme) | 简体中文
 
 ## 原理

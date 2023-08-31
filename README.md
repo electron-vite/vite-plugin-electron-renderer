@@ -26,6 +26,8 @@
 
 <br/>
 
+In short, `vite-plugin-electron-renderer` is responsible for polyfilling Electron, Node.js built-in modules.
+
 ## Install
 
 ```sh
@@ -102,7 +104,7 @@ export interface RendererOptions {
 
 <!-- ###### Electron-Renderer(vite serve) -->
 
-> Load Electron and Node.js cjs-packages/builtin-modules (Schematic)
+> Load Electron and Node.js cjs-packages/built-in-modules (Schematic)
 
 ```
  ┏————————————————————————————————————————┓                 ┏—————————————————┓
