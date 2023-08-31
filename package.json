@@ -33,7 +33,7 @@
     "rollup": "^3.22.0",
     "serialport": "^11.0.0",
     "typescript": "^5.0.4",
-    "vite": "^4.3.8",
+    "vite": "^4.3.9",
     "vite-plugin-utils": "^0.4.1",
     "vitest": "^0.31.1"
   },
