@@ -302,6 +302,7 @@ function modifyAlias(config: UserConfig, aliases: Alias[]) {
       .entries(config.resolve.alias)
       .reduce<Alias[]>((memo, [find, replacement]) => memo.concat({ find, replacement }), [])
   }
+  // Push the `aliases` to the end of `config.resolve.alias`, which means that `config.resolve.alias` has a higher priority. #82
   (config.resolve.alias as Alias[]).push(...aliases)
 }
 
