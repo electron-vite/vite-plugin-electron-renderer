@@ -92,6 +92,8 @@ export const nativeImage = electron.nativeImage;
 export const shell = electron.shell;
 export const webFrame = electron.webFrame;
 export const deprecate = electron.deprecate;
+export const app = electron.app;
+export const ipcMain = electron.ipcMain;
 `.trim()
 
 export interface RendererOptions {
