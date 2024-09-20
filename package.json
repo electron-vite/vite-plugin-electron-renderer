@@ -26,16 +26,16 @@
     "test": "vitest run"
   },
   "devDependencies": {
-    "electron": "^24.3.1",
-    "esbuild": "^0.17.19",
-    "lib-esm": "^0.4.1",
-    "node-fetch": "^3.3.1",
-    "rollup": "^3.22.0",
-    "serialport": "^11.0.0",
-    "typescript": "^5.0.4",
-    "vite": "^4.3.9",
-    "vite-plugin-utils": "^0.4.1",
-    "vitest": "^0.31.1"
+    "electron": "^32.1.2",
+    "esbuild": "^0.23.1",
+    "lib-esm": "^0.4.2",
+    "node-fetch": "^3.3.2",
+    "rollup": "^4.22.0",
+    "serialport": "^12.0.0",
+    "typescript": "^5.6.2",
+    "vite": "^5.4.6",
+    "vite-plugin-utils": "^0.4.3",
+    "vitest": "^2.1.1"
   },
   "files": [
     "dist"
