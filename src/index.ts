@@ -27,6 +27,52 @@ const electronBuiltins = [
 const CACHE_DIR = '.vite-electron-renderer'
 const TAG = '[electron-renderer]'
 const cwd = normalizePath(process.cwd())
+const electronMainApis: {
+  name: string
+  evns: ('Main' | 'Renderer' | 'Utility')[]
+  deprecated?: boolean
+}[] = [
+    { name: 'app', evns: ['Main'] },
+    { name: 'autoUpdater', evns: ['Main'] },
+    { name: 'BaseWindow', evns: ['Main'] },
+    { name: 'BrowserView', evns: ['Main'], deprecated: true },
+    { name: 'BrowserWindow', evns: ['Main'] },
+    { name: 'clipboard', evns: ['Main', 'Renderer'] },
+    { name: 'contentTracing', evns: ['Main'] },
+    { name: 'crashReporter', evns: ['Main', 'Renderer'] },
+    { name: 'desktopCapturer', evns: ['Main'] },
+    { name: 'dialog', evns: ['Main'] },
+    { name: 'globalShortcut', evns: ['Main'] },
+    { name: 'inAppPurchase', evns: ['Main'] },
+    { name: 'ipcMain', evns: ['Main'] },
+    { name: 'Menu', evns: ['Main'] },
+    { name: 'MessageChannelMain', evns: ['Main'] },
+    { name: 'MessagePortMain', evns: ['Main'] },
+    { name: 'nativeImage', evns: ['Main', 'Renderer'] },
+    { name: 'nativeTheme', evns: ['Main'] },
+    { name: 'net', evns: ['Main', 'Utility'] },
+    { name: 'netLog', evns: ['Main'] },
+    { name: 'Notification', evns: ['Main'] },
+    { name: 'parentPort', evns: ['Utility'] },
+    { name: 'powerMonitor', evns: ['Main'] },
+    { name: 'powerSaveBlocker', evns: ['Main'] },
+    { name: 'process', evns: ['Main', 'Renderer'] },
+    { name: 'protocol', evns: ['Main'] },
+    { name: 'pushNotifications', evns: ['Main'] },
+    { name: 'safeStorage', evns: ['Main'] },
+    { name: 'screen', evns: ['Main'] },
+    { name: 'session', evns: ['Main'] },
+    { name: 'ShareMenu', evns: ['Main'] },
+    { name: 'shell', evns: ['Main', 'Renderer'] },
+    { name: 'systemPreferences', evns: ['Main', 'Utility'] },
+    { name: 'TouchBar', evns: ['Main'] },
+    { name: 'Tray', evns: ['Main'] },
+    { name: 'utilityProcess', evns: ['Main'] },
+    { name: 'webContents', evns: ['Main'] },
+    { name: 'WebContentsView', evns: ['Main'] },
+    { name: 'webFrameMain', evns: ['Main'] },
+    { name: 'View', evns: ['Main'] },
+  ]
 
 /** Electron Renderer process code snippets */
 export const electron = `
@@ -92,6 +138,13 @@ export const nativeImage = electron.nativeImage;
 export const shell = electron.shell;
 export const webFrame = electron.webFrame;
 export const deprecate = electron.deprecate;
+
+// Electron Main process apis
+// Using them in the Renderer process will got undefined, which is required by some third-party npm pkgs
+${electronMainApis
+    .filter(({ evns }) => evns.length === 1 && evns[0] === 'Main')
+    .map(({ name }) => `export const ${name} = electron.${name};`)
+    .join('\n')}
 `.trim()
 
 export interface RendererOptions {
