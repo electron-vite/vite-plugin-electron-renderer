@@ -1,3 +1,14 @@
+## 0.14.6 (2024-09-20)
+
+- d96d581 chore: bump deps
+- 40f7100 Merge branch 'bugfix/fix-electron-store' into v0.14.6
+- 8cb42af chore: add .npmrc
+- 2ba1a84 feat: export all Electron Apis for third-party npm pkgs
+- d415315 fix issue
+- d5cd80b chore: add comments for #82
+- 6cf7c42 docs: update
+- 47a7ea7 chore: bump vite
+
 ## 0.14.5 (2023-05-23)
 
 - 46def0c fix: bump `lib-esm` to 0.4.1 for #73
