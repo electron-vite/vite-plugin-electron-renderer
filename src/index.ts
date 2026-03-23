@@ -138,6 +138,7 @@ export const nativeImage = electron.nativeImage;
 export const shell = electron.shell;
 export const webFrame = electron.webFrame;
 export const deprecate = electron.deprecate;
+export const webUtils = electron.webUtils;
 
 // Electron Main process apis
 // Using them in the Renderer process will got undefined, which is required by some third-party npm pkgs
