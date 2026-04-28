@@ -7,6 +7,15 @@ import pkg from './package.json'
 
 const isdev = process.argv.slice(2).includes('--watch')
 
+// External packages that must never be bundled into the plugin output
+const external = [
+  'esbuild',
+  'vite',
+  ...builtinModules,
+  ...builtinModules.map(m => `node:${m}`),
+  ...Object.keys('dependencies' in pkg ? pkg.dependencies as object : {}),
+]
+
 export default defineConfig({
   build: {
     minify: false,
@@ -20,14 +29,17 @@ export default defineConfig({
       formats: ['cjs', 'es'],
       fileName: format => format === 'es' ? '[name].mjs' : '[name].js',
     },
+    // Vite <8 (Rollup) bundler options
     rollupOptions: {
-      external: [
-        'esbuild',
-        'vite',
-        ...builtinModules,
-        ...builtinModules.map(m => `node:${m}`),
-        ...Object.keys('dependencies' in pkg ? pkg.dependencies as object : {}),
-      ],
+      external,
+      output: {
+        exports: 'named',
+      },
+    },
+    // Vite 8 (Rolldown) bundler options – mirrors rollupOptions for forward-compatibility
+    // @ts-ignore - rolldownOptions is introduced in Vite 8
+    rolldownOptions: {
+      external,
       output: {
         exports: 'named',
       },

@@ -1,7 +1,18 @@
 import type { ResolvedConfig, Plugin } from 'vite'
 
+/**
+ * Vite 8 extends `ResolvedConfig` with `rolldownOptions`.
+ * We reuse the same shape as `rollupOptions` since the output interface is compatible.
+ */
+type ResolvedConfigVite8 = ResolvedConfig & {
+  build: ResolvedConfig['build'] & {
+    /** Vite 8 (Rolldown): replaces `rollupOptions`. */
+    rolldownOptions?: ResolvedConfig['build']['rollupOptions']
+  }
+}
+
 export default function cjsShim(): Plugin {
-  let config: ResolvedConfig
+  let config: ResolvedConfigVite8
   let isCjs: boolean
 
   return {
@@ -21,14 +32,22 @@ export default function cjsShim(): Plugin {
       // TODO: compatible with custom assetsDir for static resources
     },
     configResolved(_config) {
-      config = _config
+      config = _config as ResolvedConfigVite8
 
-      const output = config.build.rollupOptions.output
-      if (output) {
-        const formats = ['cjs', 'commonjs']
+      const formats = ['cjs', 'commonjs']
 
-        // https://github.com/electron-vite/vite-plugin-electron/issues/6
-        // https://github.com/electron-vite/vite-plugin-electron/commit/e6decf42164bc1e3801e27984322c41b9c2724b7#r75138942
+      // Check rollupOptions (Vite <8) and rolldownOptions (Vite 8) for a CJS output format.
+      // Only one bundler runs at a time, so these options are mutually exclusive in practice.
+      // If, unusually, both are supplied, the first non-null one with a CJS format takes precedence.
+      // https://github.com/electron-vite/vite-plugin-electron/issues/6
+      // https://github.com/electron-vite/vite-plugin-electron/commit/e6decf42164bc1e3801e27984322c41b9c2724b7#r75138942
+      const outputSources = [
+        config.build.rollupOptions?.output,
+        config.build.rolldownOptions?.output,
+      ]
+
+      for (const output of outputSources) {
+        if (!output) continue
         if (
           Array.isArray(output)
             // Once an `output.format` is CJS, it is considered as CommonJs
@@ -36,6 +55,7 @@ export default function cjsShim(): Plugin {
             : formats.includes(output.format as string)
         ) {
           isCjs = true
+          break
         }
       }
     },
