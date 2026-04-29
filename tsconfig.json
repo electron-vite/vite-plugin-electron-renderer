@@ -1,17 +1,4 @@
 {
-  "compilerOptions": {
-    "target": "ES2022",
-    "module": "ESNext",
-    "esModuleInterop": true,
-    "moduleResolution": "Node",
-    "resolveJsonModule": true,
-    "strict": true,
-    "allowJs": true,
-    "declaration": true,
-    "skipLibCheck": true,
-    "allowSyntheticDefaultImports": true,
-    "baseUrl": ".",
-    "outDir": "types"
-  },
+  "extends": "@subf/config/tsconfig-lib",
   "include": ["src"]
 }

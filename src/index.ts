@@ -9,7 +9,6 @@ import type {
 } from 'vite'
 import { normalizePath } from 'vite'
 import esbuild from 'esbuild'
-import type { RollupOptions } from 'rollup'
 import libEsm from 'lib-esm'
 import {
   COLOURS,
@@ -18,24 +17,19 @@ import {
 } from 'vite-plugin-utils/function'
 
 /**
- * Vite 8 introduces Rolldown (a Rust-based bundler) which replaces Rollup.
- * `build.rolldownOptions` is the Vite 8 equivalent of `build.rollupOptions`.
+ * Vite 8 uses Rolldown as its bundler. `build.rolldownOptions` replaces the
+ * old `build.rollupOptions`. Since this plugin requires Vite 8+, we only
+ * configure `rolldownOptions`.
  *
- * Rolldown's output options are a strict superset of Rollup's, so `RollupOptions`
- * is a safe structural stand-in for the subset we use here:
- *   - `output.freeze`   – prevent Object.freeze on namespace objects
- *   - `output.exports`  – named export mode
- *   - `external`        – modules that should not be bundled
- *
- * In Vite 8, `build.commonjsOptions` is also deprecated because Rolldown
- * handles CommonJS modules natively without needing @rollup/plugin-commonjs.
+ * Rolldown handles CommonJS modules natively, so `build.commonjsOptions` and
+ * the old `@rollup/plugin-commonjs` `ignore` workaround are no longer needed.
  */
-type RolldownOptions = RollupOptions
-
-/** Vite 8 extends `BuildOptions` with `rolldownOptions` */
 type BuildOptionsVite8 = BuildOptions & {
-  /** Vite 8 (Rolldown): replaces `rollupOptions`. Both fields are honoured for compatibility. */
-  rolldownOptions?: RolldownOptions
+  /** Vite 8 (Rolldown): bundler options. */
+  rolldownOptions?: {
+    output?: { freeze?: boolean } | Array<{ freeze?: boolean }>
+    [key: string]: unknown
+  }
 }
 
 const require = createRequire(import.meta.url)
@@ -320,59 +314,17 @@ function adaptElectron(config: UserConfig) {
   config.build ??= {}
   const build = config.build as BuildOptionsVite8
 
-  // Some third-party modules, such as `fs-extra`, it will extend the native fs module, maybe we need to stop it
-  // ① Avoid freeze Object
-  // Apply to both rolldownOptions (Vite 8 / Rolldown) and rollupOptions (Vite <8 / Rollup) for compatibility
-  build.rollupOptions ??= {}
-  setOutputFreeze(build.rollupOptions)
-  // Vite 8: Rolldown uses `rolldownOptions` instead of `rollupOptions`
+  // Avoid freeze Object on namespace objects – Rolldown (Vite 8)
+  // Some third-party modules, such as `fs-extra`, extend the native fs module; we must prevent
+  // Rolldown from freezing those namespace objects.
   build.rolldownOptions ??= {}
-  setOutputFreeze(build.rolldownOptions)
-
-  // ② Avoid not being able to set - https://github.com/rollup/plugins/blob/commonjs-v24.0.0/packages/commonjs/src/helpers.js#L55-L60
-  // Note: In Vite 8, Rolldown handles CommonJS natively and does not use @rollup/plugin-commonjs,
-  //       so `commonjsOptions` is deprecated. `withIgnore` guards against this gracefully.
-  withIgnore(config.build, electronBuiltins)
-}
-
-function setOutputFreeze(rollupOrDownOptions: RollupOptions | RolldownOptions) {
-  rollupOrDownOptions.output ??= {}
-  if (Array.isArray(rollupOrDownOptions.output)) {
-    for (const o of rollupOrDownOptions.output) {
+  const output = build.rolldownOptions.output
+  if (Array.isArray(output)) {
+    for (const o of output) {
       o.freeze ??= false
     }
   } else {
-    rollupOrDownOptions.output.freeze ??= false
-  }
-}
-
-function withIgnore(configBuild: BuildOptions, modules: string[]) {
-  // Configure @rollup/plugin-commonjs to ignore Electron/Node built-ins,
-  // preventing it from wrapping frozen namespace objects.
-  // https://github.com/rollup/plugins/blob/commonjs-v24.0.0/packages/commonjs/src/helpers.js#L55-L60
-  //
-  // Note: In Vite 8, Rolldown handles CommonJS natively and does not use
-  // @rollup/plugin-commonjs, so `commonjsOptions` is deprecated.
-  // Setting it here is harmless – Rolldown simply ignores the field.
-  const build = configBuild as BuildOptionsVite8 & {
-    commonjsOptions?: BuildOptions['commonjsOptions']
-  }
-  build.commonjsOptions ??= {}
-  if (build.commonjsOptions.ignore) {
-    if (typeof build.commonjsOptions.ignore === 'function') {
-      const userIgnore = build.commonjsOptions.ignore
-      build.commonjsOptions.ignore = id => {
-        if (userIgnore?.(id) === true) {
-          return true
-        }
-        return modules.includes(id)
-      }
-    } else {
-      // @ts-ignore
-      build.commonjsOptions.ignore.push(...modules)
-    }
-  } else {
-    build.commonjsOptions.ignore = modules
+    build.rolldownOptions.output = { ...output, freeze: output?.freeze ?? false }
   }
 }
 

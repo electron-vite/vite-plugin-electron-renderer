@@ -1,13 +1,15 @@
 import type { ResolvedConfig, Plugin } from 'vite'
 
 /**
- * Vite 8 extends `ResolvedConfig` with `rolldownOptions`.
- * We reuse the same shape as `rollupOptions` since the output interface is compatible.
+ * Vite 8 exposes `build.rolldownOptions` (Rolldown bundler) instead of the
+ * old `build.rollupOptions`. We extend `ResolvedConfig` to type-safely access it.
  */
 type ResolvedConfigVite8 = ResolvedConfig & {
   build: ResolvedConfig['build'] & {
-    /** Vite 8 (Rolldown): replaces `rollupOptions`. */
-    rolldownOptions?: ResolvedConfig['build']['rollupOptions']
+    /** Vite 8 (Rolldown): bundler options. */
+    rolldownOptions?: {
+      output?: { format?: string } | Array<{ format?: string }>
+    }
   }
 }
 
@@ -36,27 +38,15 @@ export default function cjsShim(): Plugin {
 
       const formats = ['cjs', 'commonjs']
 
-      // Check rollupOptions (Vite <8) and rolldownOptions (Vite 8) for a CJS output format.
-      // Only one bundler runs at a time, so these options are mutually exclusive in practice.
-      // If, unusually, both are supplied, the first non-null one with a CJS format takes precedence.
+      // Detect whether the user configured a CJS output format via rolldownOptions (Vite 8).
       // https://github.com/electron-vite/vite-plugin-electron/issues/6
       // https://github.com/electron-vite/vite-plugin-electron/commit/e6decf42164bc1e3801e27984322c41b9c2724b7#r75138942
-      const outputSources = [
-        config.build.rollupOptions?.output,
-        config.build.rolldownOptions?.output,
-      ]
-
-      for (const output of outputSources) {
-        if (!output) continue
-        if (
-          Array.isArray(output)
-            // Once an `output.format` is CJS, it is considered as CommonJs
-            ? output.find(o => formats.includes(o.format as string))
-            : formats.includes(output.format as string)
-        ) {
-          isCjs = true
-          break
-        }
+      const output = config.build.rolldownOptions?.output
+      if (output) {
+        isCjs = Array.isArray(output)
+          // Once an `output.format` is CJS, it is considered as CommonJs
+          ? !!output.find(o => formats.includes(o.format as string))
+          : formats.includes(output.format as string)
       }
     },
     transformIndexHtml(html) {
