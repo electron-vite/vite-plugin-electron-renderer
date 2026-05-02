@@ -15,8 +15,8 @@ importers:
         specifier: ^6.1.4
         version: 6.1.7
       electron:
-        specifier: ^32.1.2
-        version: 32.3.3
+        specifier: ^39.8.1
+        version: 39.8.9
       esbuild:
         specifier: ^0.23.1
         version: 0.23.1
@@ -67,8 +67,8 @@ importers:
         specifier: ^3.1.8
         version: 3.1.11
       electron:
-        specifier: ^24.3.1
-        version: 24.8.8
+        specifier: ^39.8.1
+        version: 39.8.9
       electron-builder:
         specifier: ^23.6.0
         version: 23.6.0
@@ -97,8 +97,8 @@ importers:
   examples/worker:
     devDependencies:
       electron:
-        specifier: ^24.3.1
-        version: 24.8.8
+        specifier: ^39.8.1
+        version: 39.8.9
       electron-builder:
         specifier: ^23.6.0
         version: 23.6.0
@@ -1279,11 +1279,8 @@ packages:
   '@types/ms@2.1.0':
     resolution: {integrity: sha512-GsCCIZDE/p3i96vtEqx+7dBUGXrc7zeSK3wwPHIaRThS+9OhWIXRqzs4d6k1SVU8g91DrNRWxWUGhp5KXQb2VA==}
 
-  '@types/node@18.19.130':
-    resolution: {integrity: sha512-GRaXQx6jGfL8sKfaIDD6OupbIHBr9jv7Jnaml9tB7l4v068PAOXqfcujMMo5PhbIs6ggR1XODELqahT2R8v0fg==}
-
-  '@types/node@20.19.39':
-    resolution: {integrity: sha512-orrrD74MBUyK8jOAD/r0+lfa1I2MO6I+vAkmAWzMYbCcgrN4lCrmK52gRFQq/JRxfYPfonkr4b0jcY7Olqdqbw==}
+  '@types/node@22.19.17':
+    resolution: {integrity: sha512-wGdMcf+vPYM6jikpS/qhg6WiqSV/OhG+jeeHT/KlVqxYfD40iYJf9/AE1uQxVWFvU7MipKRkRv8NSHiCGgPr8Q==}
 
   '@types/node@25.6.0':
     resolution: {integrity: sha512-+qIYRKdNYJwY3vRCZMdJbPLJAtGjQBudzZzdzwQYkEPQd+PJGixUL5QfvCLDaULoLv+RhT3LDkwEfKaAkgSmNQ==}
@@ -1764,13 +1761,8 @@ packages:
   electron-store@8.2.0:
     resolution: {integrity: sha512-ukLL5Bevdil6oieAOXz3CMy+OgaItMiVBg701MNlG6W5RaC0AHN7rvlqTCmeb6O7jP0Qa1KKYTE0xV0xbhF4Hw==}
 
-  electron@24.8.8:
-    resolution: {integrity: sha512-0A2tGwG/0hxnD32Lil9wgSydQ0HCP5AdkgcH+qee3QgaC2jVq55YIbrj/0ZAq4L7yiZvQTzYIrc6kie7OahJKQ==}
-    engines: {node: '>= 12.20.55'}
-    hasBin: true
-
-  electron@32.3.3:
-    resolution: {integrity: sha512-7FT8tDg+MueAw8dBn5LJqDvlM4cZkKJhXfgB3w7P5gvSoUQVAY6LIQcXJxgL+vw2rIRY/b9ak7ZBFbCMF2Bk4w==}
+  electron@39.8.9:
+    resolution: {integrity: sha512-0zgNu0MmWR/kzFm+B+LlvpLOX8l3wt1z+BJIYv2Uxc2bEqWBT3jNsX1IhPVP5OJijjZO5ewCOIy0n/bsfJfjdw==}
     engines: {node: '>= 12.20.55'}
     hasBin: true
 
@@ -2859,9 +2851,6 @@ packages:
   unconfig-core@7.5.0:
     resolution: {integrity: sha512-Su3FauozOGP44ZmKdHy2oE6LPjk51M/TRRjHv2HNCWiDvfvCoxC2lno6jevMA91MYAdCdwP05QnWdWpSbncX/w==}
 
-  undici-types@5.26.5:
-    resolution: {integrity: sha512-JlCMO+ehdEIKqlFxk6IfVoAUVmgz7cU7zD/h9XZ0qzeosSHmUJVOzSQvvYSYWXkFXC+IfLKSIffhv0sVZup6pA==}
-
   undici-types@6.21.0:
     resolution: {integrity: sha512-iwDZqg0QAGrg9Rav5H4n0M64c3mkR59cJ6wQp+7C4nI0gsmExaedaYLNO44eT4AtBBwjbTiGPMlt2Md0T9H9JQ==}
 
@@ -3747,7 +3736,7 @@ snapshots:
     dependencies:
       '@types/http-cache-semantics': 4.2.0
       '@types/keyv': 3.1.4
-      '@types/node': 20.19.39
+      '@types/node': 25.6.0
       '@types/responselike': 1.0.3
 
   '@types/debug@4.1.13':
@@ -3772,7 +3761,7 @@ snapshots:
 
   '@types/keyv@3.1.4':
     dependencies:
-      '@types/node': 20.19.39
+      '@types/node': 25.6.0
 
   '@types/minimatch@6.0.0':
     dependencies:
@@ -3781,11 +3770,7 @@ snapshots:
 
   '@types/ms@2.1.0': {}
 
-  '@types/node@18.19.130':
-    dependencies:
-      undici-types: 5.26.5
-
-  '@types/node@20.19.39':
+  '@types/node@22.19.17':
     dependencies:
       undici-types: 6.21.0
 
@@ -3801,7 +3786,7 @@ snapshots:
 
   '@types/responselike@1.0.3':
     dependencies:
-      '@types/node': 20.19.39
+      '@types/node': 25.6.0
 
   '@types/sqlite3@3.1.11':
     dependencies:
@@ -3818,7 +3803,7 @@ snapshots:
 
   '@types/yauzl@2.10.3':
     dependencies:
-      '@types/node': 20.19.39
+      '@types/node': 25.6.0
     optional: true
 
   '@vitest/expect@2.1.9':
@@ -4378,18 +4363,10 @@ snapshots:
       conf: 10.2.0
       type-fest: 2.19.0
 
-  electron@24.8.8:
+  electron@39.8.9:
     dependencies:
       '@electron/get': 2.0.3
-      '@types/node': 18.19.130
-      extract-zip: 2.0.1
-    transitivePeerDependencies:
-      - supports-color
-
-  electron@32.3.3:
-    dependencies:
-      '@electron/get': 2.0.3
-      '@types/node': 20.19.39
+      '@types/node': 22.19.17
       extract-zip: 2.0.1
     transitivePeerDependencies:
       - supports-color
@@ -5663,8 +5640,6 @@ snapshots:
     dependencies:
       '@quansync/fs': 1.0.0
       quansync: 1.0.0
-
-  undici-types@5.26.5: {}
 
   undici-types@6.21.0: {}
 
