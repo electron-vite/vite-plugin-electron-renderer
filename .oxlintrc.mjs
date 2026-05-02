@@ -1,6 +1,3 @@
-import { CONFIG } from '@subf/config/oxlint'
-import { defineConfig } from 'oxlint'
+import { subfLint } from '@subf/config/oxlint'
 
-export default defineConfig({
-  ...CONFIG,
-})
+export default subfLint()
