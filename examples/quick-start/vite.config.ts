@@ -18,8 +18,8 @@ export default defineConfig({
     minify: false,
   },
   optimizeDeps: {
-    // If an npm package is a pure ESM format package, 
-    // and the packages it depends on are also in ESM format, 
+    // If an npm package is a pure ESM format package,
+    // and the packages it depends on are also in ESM format,
     // then put it in `optimizeDeps.exclude` and it will work normally.
     // exclude: ['only-support-pure-esmodule-package'],
   },

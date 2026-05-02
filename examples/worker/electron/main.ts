@@ -1,8 +1,9 @@
-process.env['ELECTRON_DISABLE_SECURITY_WARNINGS'] = 'true'
-
-import { app, BrowserWindow } from 'electron'
 import path from 'node:path'
 import { Worker } from 'node:worker_threads'
+
+import { app, BrowserWindow } from 'electron'
+
+process.env['ELECTRON_DISABLE_SECURITY_WARNINGS'] = 'true'
 
 let win: BrowserWindow
 
@@ -12,7 +13,7 @@ app.whenReady().then(() => {
       contextIsolation: false,
       nodeIntegration: true,
       nodeIntegrationInWorker: true,
-    }
+    },
   })
   if (process.env.VITE_DEV_SERVER_URL) {
     win.loadURL(process.env.VITE_DEV_SERVER_URL)
@@ -22,7 +23,7 @@ app.whenReady().then(() => {
   }
 
   const worker = new Worker(path.join(__dirname, './worker.js'))
-  worker.on('message', value => {
+  worker.on('message', (value) => {
     console.log('[worker message]:', value)
   })
 })

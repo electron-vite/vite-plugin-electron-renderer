@@ -25,22 +25,24 @@ export default function cjsShim(): Plugin {
 
       const output = config.build.rollupOptions.output
       if (output) {
-        const formats = ['cjs', 'commonjs']
+        const formats = new Set(['cjs', 'commonjs'])
 
         // https://github.com/electron-vite/vite-plugin-electron/issues/6
         // https://github.com/electron-vite/vite-plugin-electron/commit/e6decf42164bc1e3801e27984322c41b9c2724b7#r75138942
         if (
           Array.isArray(output)
-            // Once an `output.format` is CJS, it is considered as CommonJs
-            ? output.find(o => formats.includes(o.format as string))
-            : formats.includes(output.format as string)
+            ? // Once an `output.format` is CJS, it is considered as CommonJs
+              output.find((o) => formats.has(o.format as string))
+            : formats.has(output.format as string)
         ) {
           isCjs = true
         }
       }
     },
     transformIndexHtml(html) {
-      if (!isCjs) return
+      if (!isCjs) {
+        return
+      }
 
       const headRE = /(<\s*?head\s*?>)/
       const assetsDir = config.build.assetsDir
@@ -59,7 +61,7 @@ export default function cjsShim(): Plugin {
     if (request.startsWith(prefix)) {
       try {
         // TODO: The way is more elegant.
-        var newRequest = request.replace(prefix, prefix + '${assetsDir + "/"}');
+        var newRequest = request.replace(prefix, '${`./${assetsDir}/`}');
         return _resolveFilename.call(this, newRequest, parent, isMain, options);
       } catch (error) { }
     }
@@ -67,15 +69,15 @@ export default function cjsShim(): Plugin {
   };
 })();
 </script>`
-        html = html.replace(headRE, '$1\n' + requireIdShim)
+        html = html.replace(headRE, `$1\n${requireIdShim}`)
       }
 
       // ---------------------------------------- shim-exports
       // fix(🐞): `exports is not defined` in "use strict"
       const exportsShim = `<script id="shim-exports">var exports = typeof module !== 'undefined' ? module.exports : {};</script>`
-      html = html.replace(headRE, '$1\n' + exportsShim)
+      html = html.replace(headRE, `$1\n${exportsShim}`)
 
       return html
-    }
+    },
   }
 }

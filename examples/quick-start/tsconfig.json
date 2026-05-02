@@ -14,8 +14,6 @@
     "noUnusedParameters": true,
     "noImplicitReturns": true,
     "skipLibCheck": true,
-    "types": [
-      "vite-plugin-electron/electron-env"
-    ]
+    "types": ["vite-plugin-electron/electron-env"]
   }
 }

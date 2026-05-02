@@ -1,9 +1,12 @@
-import { ipcRenderer } from 'electron'
 import { readFile } from 'node:fs'
+
+import { ipcRenderer } from 'electron'
 
 console.log('ipcRenderer:', ipcRenderer)
 console.log('readFile:', readFile)
 
-import('path').then(m => m.default).then(path => {
-  console.log(path)
-})
+import('node:path')
+  .then((m) => m.default)
+  .then((path) => {
+    console.log(path)
+  })
