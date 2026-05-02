@@ -61,7 +61,7 @@ export default function cjsShim(): Plugin {
     if (request.startsWith(prefix)) {
       try {
         // TODO: The way is more elegant.
-        var newRequest = request.replace(prefix, '${`./${assetsDir}/`}');
+        var newRequest = request.replace(prefix, ${JSON.stringify(`./${assetsDir}/`)});
         return _resolveFilename.call(this, newRequest, parent, isMain, options);
       } catch (error) { }
     }
