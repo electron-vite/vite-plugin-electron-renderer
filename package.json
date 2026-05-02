@@ -29,8 +29,7 @@
       "import": "./dist/cjs-shim.mjs",
       "require": "./dist/cjs-shim.cjs"
     },
-    "./package.json": "./package.json",
-    "./*": "./*"
+    "./package.json": "./package.json"
   },
   "scripts": {
     "dev": "tsdown --watch",
