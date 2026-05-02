@@ -487,10 +487,15 @@ async function getPreBundleSnippets(options: {
     fs.rmSync(entry, { force: true })
   }
 
+  const requirePath = path.posix.relative(
+    path.posix.dirname(`${path.posix.join(outdir, module)}.mjs`),
+    outfile,
+  )
+
   return getSnippets({
     import: outfile,
     // `require()` in script-module lookup path based on `process.cwd()` 🤔
-    export: `./${path.posix.basename(outfile)}`,
+    export: requirePath.startsWith('.') ? requirePath : `./${requirePath}`,
   })
 }
 
