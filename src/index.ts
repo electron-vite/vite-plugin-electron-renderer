@@ -3,14 +3,14 @@ import { createRequire, builtinModules } from 'node:module'
 import path from 'node:path'
 
 import type { Alias, BuildOptions, Logger, Plugin as VitePlugin, UserConfig } from 'vite'
-import { createBuilder, createLogger } from 'vite'
+import { createBuilder, createLogger, normalizePath } from 'vite'
 
 const require = createRequire(import.meta.url)
 const builtins = builtinModules.filter((m) => !m.startsWith('_'))
 const electronBuiltins = ['electron', ...builtins, ...builtins.map((module) => `node:${module}`)]
 const CACHE_DIR = '.vite-electron-renderer'
 const TAG = '[electron-renderer]'
-export const logger: Logger = createLogger('info', { prefix: TAG })
+const logger: Logger = createLogger('info', { prefix: TAG })
 const IDENTIFIER_RE = /^[$A-Z_][0-9A-Z_$]*$/i
 const KEYWORDS = new Set([
   'abstract',
@@ -260,7 +260,7 @@ export default function renderer(options: RendererOptions = {}): VitePlugin {
             async customResolver(source) {
               let id = moduleCache.get(source)
               if (!id) {
-                id = `${path.posix.join(cacheDir, source)}.mjs`
+                id = getCacheFile(cacheDir, source, '.mjs').filename
 
                 if (!fs.existsSync(id)) {
                   ensureDir(path.dirname(id))
@@ -286,7 +286,7 @@ export default function renderer(options: RendererOptions = {}): VitePlugin {
             async customResolver(source, importer, resolveOptions) {
               let id = moduleCache.get(source)
               if (!id) {
-                const filename = `${path.posix.join(cacheDir, source)}.mjs`
+                const filename = getCacheFile(cacheDir, source, '.mjs').filename
                 if (fs.existsSync(filename)) {
                   id = filename
                 } else {
@@ -300,7 +300,7 @@ export default function renderer(options: RendererOptions = {}): VitePlugin {
                         esm: (module, buildOptions) =>
                           getPreBundleSnippets({
                             module,
-                            outdir: cacheDir,
+                            outDir: cacheDir,
                             root,
                             buildOptions,
                           }),
@@ -310,7 +310,7 @@ export default function renderer(options: RendererOptions = {}): VitePlugin {
                     } else if (resolved.type === 'esm') {
                       snippets = await getPreBundleSnippets({
                         module: source,
-                        outdir: cacheDir,
+                        outDir: cacheDir,
                         root,
                       })
                     }
@@ -415,26 +415,27 @@ function modifyAlias(config: UserConfig, aliases: Alias[]) {
   ;(config.resolve.alias as Alias[]).push(...aliases)
 }
 
-function getSnippets(moduleImport: string, moduleExport = moduleImport) {
+function getSnippets(moduleId: string, requireArg = moduleId) {
   // If a module is a CommonJs, use the `require()` load it can bring better performance,
   // especially it is a C/C++ module, this can avoid a lot of trouble
 
   // `avoid_parse_require` can be avoid Vite transforms parsing `require()`
-  return `const avoid_parse_require = require; const _M_ = avoid_parse_require(${JSON.stringify(moduleExport)});\n${getExportSnippets(
-    Object.getOwnPropertyNames(/* not await import */ require(moduleImport)),
+  return `const avoid_parse_require = require; const _M_ = avoid_parse_require(${JSON.stringify(requireArg)});\n${getExportSnippets(
+    Object.getOwnPropertyNames(/* not await import */ require(moduleId)),
   )}`
 }
 
 async function getPreBundleSnippets(options: {
   module: string
-  outdir: string
+  outDir: string
   root: string
   buildOptions?: NonNullable<BuildOptions['rolldownOptions']>
 }) {
-  const { module, outdir, root, buildOptions } = options
+  const { module, outDir, root, buildOptions } = options
 
-  const outfile = `${path.posix.join(outdir, module)}.cjs`
-  const entry = `${path.posix.join(outdir, module)}.entry.mjs`
+  const output = getCacheFile(outDir, module, '.cjs')
+  const entry = getCacheFile(outDir, module, '.entry.mjs').filename
+  const wrapper = getCacheFile(outDir, module, '.mjs')
 
   ensureDir(path.dirname(entry))
   fs.writeFileSync(
@@ -456,11 +457,11 @@ async function getPreBundleSnippets(options: {
         emptyOutDir: false,
         lib: {
           entry,
-          fileName: () => `${module}.cjs`,
+          fileName: () => output.relativePath,
           formats: ['cjs'],
         },
         minify: false,
-        outDir: outdir,
+        outDir,
         sourcemap: 'inline',
         target: 'node14',
         rolldownOptions: mergePreBundleBuildOptions(buildOptions),
@@ -480,19 +481,31 @@ async function getPreBundleSnippets(options: {
     fs.rmSync(entry, { force: true })
   }
 
-  const requirePath = path.posix.relative(
-    path.posix.dirname(`${path.posix.join(outdir, module)}.mjs`),
-    outfile,
-  )
+  const requirePath = path.posix.relative(path.posix.dirname(wrapper.filename), output.filename)
 
   // `require()` in script-module lookup path based on `process.cwd()` 🤔
-  return getSnippets(outfile, requirePath.startsWith('.') ? requirePath : `./${requirePath}`)
+  return getSnippets(
+    output.filename,
+    requirePath.startsWith('.') ? requirePath : `./${requirePath}`,
+  )
 }
 
 function ensureDir(dirname: string) {
   if (!fs.existsSync(dirname)) {
     fs.mkdirSync(dirname, { recursive: true })
   }
+}
+
+function getCacheFile(outDir: string, moduleId: string, extension: string) {
+  const root = path.resolve(outDir)
+  const filename = path.resolve(root, `${moduleId}${extension}`)
+  const relativePath = normalizePath(path.relative(root, filename))
+
+  if (relativePath === '' || relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
+    throw new TypeError(`Invalid cache file path for ${JSON.stringify(moduleId)}`)
+  }
+
+  return { filename: normalizePath(filename), relativePath }
 }
 
 function getExportSnippets(members: string[]) {
