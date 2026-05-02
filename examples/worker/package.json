@@ -16,7 +16,7 @@
   },
   "dependencies": {},
   "devDependencies": {
-    "electron": "catalog:electron",
+    "electron": "catalog:",
     "electron-builder": "^23.6.0",
     "typescript": "^5.0.2",
     "vite": "^4.3.9",

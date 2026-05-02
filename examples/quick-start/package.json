@@ -20,7 +20,7 @@
   },
   "devDependencies": {
     "@types/sqlite3": "^3.1.8",
-    "electron": "catalog:electron",
+    "electron": "catalog:",
     "electron-builder": "^23.6.0",
     "electron-store": "^8.1.0",
     "execa": "^7.1.1",
