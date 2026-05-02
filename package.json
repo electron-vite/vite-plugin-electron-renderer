@@ -43,7 +43,7 @@
   "devDependencies": {
     "@subf/config": "^0.2.1",
     "defu": "^6.1.4",
-    "electron": "^32.1.2",
+    "electron": "^39.8.1",
     "esbuild": "^0.23.1",
     "lib-esm": "^0.4.2",
     "node-fetch": "^3.3.2",
