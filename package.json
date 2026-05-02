@@ -3,6 +3,7 @@
   "version": "0.14.7",
   "description": "Support use Node.js API in Electron-Renderer",
   "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
@@ -19,24 +20,31 @@
   "author": "草鞋没号 <308487730@qq.com>",
   "license": "MIT",
   "scripts": {
-    "dev": "vite build --watch",
-    "build": "vite build",
-    "types": "tsc --emitDeclarationOnly",
-    "prepublishOnly": "npm run build && npm run test",
+    "dev": "tsdown --watch",
+    "build": "tsdown",
+    "lint": "oxlint",
+    "format": "oxfmt --check .",
+    "prepublishOnly": "pnpm build && pnpm test",
     "test": "vitest run"
   },
   "devDependencies": {
+    "@subf/config": "^0.2.1",
+    "defu": "^6.1.4",
     "electron": "^32.1.2",
     "esbuild": "^0.23.1",
     "lib-esm": "^0.4.2",
     "node-fetch": "^3.3.2",
+    "oxfmt": "^0.47.0",
+    "oxlint": "^1.62.0",
     "rollup": "^4.22.0",
     "serialport": "^12.0.0",
+    "tsdown": "^0.21.10",
     "typescript": "^5.6.2",
     "vite": "^5.4.6",
     "vite-plugin-utils": "^0.4.3",
     "vitest": "^2.1.1"
   },
+  "packageManager": "pnpm@10.33.2",
   "files": [
     "dist"
   ],
