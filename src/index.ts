@@ -91,7 +91,7 @@ const KEYWORDS = new Set([
  */
 const COLOURS = {
   $: (colour: number) => (str: string) => `\x1B[${colour}m${str}\x1B[0m`,
-  gary: (str: string) => COLOURS.$(90)(str),
+  gray: (str: string) => COLOURS.$(90)(str),
   cyan: (str: string) => COLOURS.$(36)(str),
   yellow: (str: string) => COLOURS.$(33)(str),
 }
@@ -333,7 +333,7 @@ export default function renderer(options: RendererOptions = {}): VitePlugin {
                     }
 
                     console.log(
-                      COLOURS.gary(TAG),
+                      COLOURS.gray(TAG),
                       COLOURS.cyan('pre-bundling'),
                       COLOURS.yellow(source),
                     )
