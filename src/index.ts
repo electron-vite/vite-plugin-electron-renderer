@@ -85,6 +85,16 @@ const KEYWORDS = new Set([
   'with',
   'yield',
 ])
+/**
+ * @see https://stackoverflow.com/questions/9781218/how-to-change-node-jss-console-font-color
+ * @see https://en.wikipedia.org/wiki/ANSI_escape_code#Colors
+ */
+const COLOURS = {
+  $: (colour: number) => (str: string) => `\x1B[${colour}m${str}\x1B[0m`,
+  gary: (str: string) => COLOURS.$(90)(str),
+  cyan: (str: string) => COLOURS.$(36)(str),
+  yellow: (str: string) => COLOURS.$(33)(str),
+}
 const electronMainApis: {
   name: string
   evns: ('Main' | 'Renderer' | 'Utility')[]
@@ -347,7 +357,7 @@ export default function renderer(options: RendererOptions = {}): VitePlugin {
                     Object.assign({ skipSelf: true }, resolveOptions),
                   ).then((resolved) => resolved || { id: source })
                 : { id }
-            }
+            },
           })
 
         // Why is the builtin modules loaded by modifying `resolve.alias` instead of using the plugin `resolveId` + `load` hooks?
@@ -374,21 +384,8 @@ function adaptElectron(config: UserConfig) {
   config.build.rolldownOptions ??= {}
 
   // Some third-party modules, such as `fs-extra`, it will extend the nativ fs module, maybe we need to stop it
-  // ① Avoid freeze Object
-  setOutputFreeze(config.build.rolldownOptions)
-  // ② Avoid not being able to set - https://github.com/rollup/plugins/blob/commonjs-v24.0.0/packages/commonjs/src/helpers.js#L55-L60
+  // Avoid not being able to set - https://github.com/rollup/plugins/blob/commonjs-v24.0.0/packages/commonjs/src/helpers.js#L55-L60
   withIgnore(config.build, electronBuiltins)
-}
-
-function setOutputFreeze(rolldownOptions: NonNullable<BuildOptions['rolldownOptions']>) {
-  rolldownOptions.output ??= {}
-  if (Array.isArray(rolldownOptions.output)) {
-    for (const o of rolldownOptions.output) {
-      o.freeze ??= false
-    }
-  } else {
-    rolldownOptions.output.freeze ??= false
-  }
 }
 
 function withIgnore(configBuild: BuildOptions, modules: string[]) {
@@ -506,7 +503,9 @@ async function getPreBundleSnippets(options: {
   return getSnippets({
     import: outfile,
     // `require()` in script-module lookup path based on `process.cwd()` 🤔
-    export: relativeify(path.posix.relative(cwd, outfile)),
+    export: relativeify(
+      path.posix.relative(path.posix.dirname(`${path.posix.join(outdir, module)}.mjs`), outfile),
+    ),
   })
 }
 
@@ -528,7 +527,8 @@ function getExportSnippets(members: string[]) {
     }
     seen.add(member)
 
-    const expression = member === 'default' ? '_M_.default || _M_' : `_M_[${JSON.stringify(member)}]`
+    const expression =
+      member === 'default' ? '_M_.default || _M_' : `_M_[${JSON.stringify(member)}]`
     if (isSafeIdentifier(member)) {
       exportSnippets.push(`export const ${member} = ${expression};`)
       continue
@@ -566,9 +566,7 @@ function mergePreBundleBuildOptions(
   }
 }
 
-function mergeExternalOptions(
-  external: NonNullable<BuildOptions['rolldownOptions']>['external'],
-) {
+function mergeExternalOptions(external: NonNullable<BuildOptions['rolldownOptions']>['external']) {
   if (!external) {
     return electronBuiltins
   }
@@ -576,10 +574,14 @@ function mergeExternalOptions(
     const userExternal = external as (...args: unknown[]) => unknown
     return (...args: unknown[]) => {
       const source = args[0]
-      return (typeof source === 'string' && electronBuiltins.includes(source)) || userExternal(...args)
+      return (
+        (typeof source === 'string' && electronBuiltins.includes(source)) || userExternal(...args)
+      )
     }
   }
-  return Array.isArray(external) ? [...electronBuiltins, ...external] : [...electronBuiltins, external]
+  return Array.isArray(external)
+    ? [...electronBuiltins, ...external]
+    : [...electronBuiltins, external]
 }
 
 function mergeOutputOptions(output: NonNullable<BuildOptions['rolldownOptions']>['output']) {
@@ -593,7 +595,10 @@ function mergeOutputOptions(output: NonNullable<BuildOptions['rolldownOptions']>
     : { ...defaults, ...output }
 }
 
-function writeRolldownOutput(outputs: Array<{ output: Array<Record<string, unknown>> }>, outdir: string) {
+function writeRolldownOutput(
+  outputs: Array<{ output: Array<Record<string, unknown>> }>,
+  outdir: string,
+) {
   for (const output of outputs) {
     for (const chunk of output.output) {
       const filename = path.posix.join(outdir, chunk.fileName as string)
@@ -602,7 +607,9 @@ function writeRolldownOutput(outputs: Array<{ output: Array<Record<string, unkno
         const source = chunk.source
         fs.writeFileSync(
           filename,
-          typeof source === 'string' || source instanceof Uint8Array ? source : String(source ?? ''),
+          typeof source === 'string' || source instanceof Uint8Array
+            ? source
+            : String(source ?? ''),
         )
       } else {
         fs.writeFileSync(filename, String(chunk.code ?? ''))
@@ -619,17 +626,6 @@ function relativeify(relativePath: string) {
     return `./${relativePath}`
   }
   return relativePath
-}
-
-/**
- * @see https://stackoverflow.com/questions/9781218/how-to-change-node-jss-console-font-color
- * @see https://en.wikipedia.org/wiki/ANSI_escape_code#Colors
- */
-const COLOURS = {
-  $: (colour: number) => (str: string) => `\x1b[${colour}m${str}\x1b[0m`,
-  gary: (str: string) => COLOURS.$(90)(str),
-  cyan: (str: string) => COLOURS.$(36)(str),
-  yellow: (str: string) => COLOURS.$(33)(str),
 }
 
 function findNodeModules(root: string) {

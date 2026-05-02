@@ -54,7 +54,7 @@ describe('config', () => {
     expect(config.base).equal('./')
   })
 
-  it('rollup.output', async () => {
+  it('rolldown.output', async () => {
     const getConfig = (output: NonNullable<BuildOptions['rolldownOptions']>['output']) =>
       resolveConfig(
         {
@@ -69,12 +69,12 @@ describe('config', () => {
         'build',
       )
 
-    const output = (await getConfig({})).build.rolldownOptions.output
-    expect(output.freeze).toBe(false)
+    const output = (await getConfig({ exports: 'named' })).build.rolldownOptions.output
+    expect(output.exports).toBe('named')
 
-    const outputArr = (await getConfig([{}])).build.rolldownOptions.output
+    const outputArr = (await getConfig([{ exports: 'named' }])).build.rolldownOptions.output
     for (const out of outputArr) {
-      expect(out.freeze).toBe(false)
+      expect(out.exports).toBe('named')
     }
   })
 
