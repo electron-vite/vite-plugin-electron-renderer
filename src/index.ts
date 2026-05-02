@@ -325,8 +325,8 @@ function withIgnore(configBuild: BuildOptions, modules: string[]) {
         return modules.includes(id)
       }
     } else {
-      // @ts-expect-error TypeScript does not narrow this branch from function to array.
-      configBuild.commonjsOptions.ignore.push(...modules)
+      const ignore = configBuild.commonjsOptions.ignore as string[]
+      ignore.push(...modules)
     }
   } else {
     configBuild.commonjsOptions.ignore = modules
@@ -366,7 +366,7 @@ function getSnippets(module: { import: string; export: string }) {
   // especially it is a C/C++ module, this can avoid a lot of trouble
 
   // `avoid_parse_require` can be avoid `esbuild.build`, `@rollup/plugin-commonjs`
-  return `const avoid_parse_require = require; const _M_ = avoid_parse_require('${module.export}');\n${exports}`
+  return `const avoid_parse_require = require; const _M_ = avoid_parse_require(${JSON.stringify(module.export)});\n${exports}`
 }
 
 async function getPreBundleSnippets(options: {
