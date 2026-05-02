@@ -73,12 +73,19 @@ describe('optimizer', async () => {
     if (!plugin_renderer_config) {
       throw new TypeError('renderer plugin is missing a config hook')
     }
+    const plugin_renderer_config_handler =
+      typeof plugin_renderer_config === 'function'
+        ? plugin_renderer_config
+        : plugin_renderer_config.handler
 
-    plugin_renderer.config = function plugin_renderer(config, env) {
-      // For force pre-bundling `esm` module
-      // https://github.com/electron-vite/vite-plugin-electron-renderer/blob/v0.14.3/src/index.ts#L133-L137
-      env.command = 'serve'
-      return plugin_renderer_config.call(plugin_renderer, config, env)
+    plugin_renderer.config = {
+      ...(typeof plugin_renderer_config === 'object' ? plugin_renderer_config : {}),
+      handler(config, env) {
+        // For force pre-bundling `esm` module
+        // https://github.com/electron-vite/vite-plugin-electron-renderer/blob/v0.14.3/src/index.ts#L133-L137
+        env.command = 'serve'
+        return plugin_renderer_config_handler.call(plugin_renderer, config, env)
+      },
     }
 
     await viteBuild({

@@ -1,7 +1,6 @@
 import { builtinModules } from 'node:module'
 
-import type { OutputOptions, RollupOptions } from 'rollup'
-import type { UserConfig } from 'vite'
+import type { BuildOptions, UserConfig } from 'vite'
 import { resolveConfig } from 'vite'
 import { describe, expect, it } from 'vitest'
 
@@ -18,7 +17,7 @@ describe('config', () => {
     const getConfig = (external: ExternalOption) => resolveConfig({
       configFile: false,
       build: {
-        rollupOptions: {
+        rolldownOptions: {
           external,
         },
       },
@@ -27,19 +26,19 @@ describe('config', () => {
     const external = builtins as ExternalOption[]
 
     const external_string: ExternalOption = 'electron'
-    const external_string2 = (await getConfig(external_string))!.build!.rollupOptions!.external
+    const external_string2 = (await getConfig(external_string))!.build!.rolldownOptions!.external
     expect(external_string2).deep.equal(external.concat(external_string))
 
     const external_array: ExternalOption = ['electron']
-    const external_array2 = (await getConfig(external_array))!.build!.rollupOptions!.external
+    const external_array2 = (await getConfig(external_array))!.build!.rolldownOptions!.external
     expect(external_array2).deep.equal(external.concat(external_array))
 
     const external_regexp: ExternalOption = /electron/
-    const external_regexp2 = (await getConfig(external_regexp))!.build!.rollupOptions!.external
+    const external_regexp2 = (await getConfig(external_regexp))!.build!.rolldownOptions!.external
     expect(external_regexp2).deep.equal(external.concat(external_regexp))
 
     const external_function: ExternalOption = (source) => ['electron'].includes(source)
-    const external_function2 = (await getConfig(external_function))!.build!.rollupOptions!.external
+    const external_function2 = (await getConfig(external_function))!.build!.rolldownOptions!.external
     expect((external_function2 as (source: string) => boolean)('electron')).true
   }) */
 
@@ -56,12 +55,12 @@ describe('config', () => {
   })
 
   it('rollup.output', async () => {
-    const getConfig = (output: RollupOptions['output']) =>
+    const getConfig = (output: NonNullable<BuildOptions['rolldownOptions']>['output']) =>
       resolveConfig(
         {
           configFile: false,
           build: {
-            rollupOptions: {
+            rolldownOptions: {
               output,
             },
           },
@@ -70,10 +69,10 @@ describe('config', () => {
         'build',
       )
 
-    const output = (await getConfig({})).build.rollupOptions.output as OutputOptions
+    const output = (await getConfig({})).build.rolldownOptions.output
     expect(output.freeze).toBe(false)
 
-    const outputArr = (await getConfig([{}])).build.rollupOptions.output as OutputOptions[]
+    const outputArr = (await getConfig([{}])).build.rolldownOptions.output
     for (const out of outputArr) {
       expect(out.freeze).toBe(false)
     }

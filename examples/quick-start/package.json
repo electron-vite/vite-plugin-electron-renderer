@@ -15,19 +15,19 @@
     "build": "vite build && electron-builder"
   },
   "dependencies": {
-    "serialport": "^11.0.0",
-    "sqlite3": "^5.1.6"
+    "serialport": "^13.0.0",
+    "sqlite3": "^6.0.1"
   },
   "devDependencies": {
-    "@types/sqlite3": "^3.1.8",
+    "@types/sqlite3": "^5.1.0",
     "electron": "catalog:",
-    "electron-builder": "^23.6.0",
-    "electron-store": "^8.1.0",
-    "execa": "^7.1.1",
-    "got": "^12.6.0",
-    "node-fetch": "^3.3.1",
-    "vite": "^4.3.9",
-    "vite-plugin-electron": "^0.11.1",
+    "electron-builder": "^26.8.1",
+    "electron-store": "^11.0.2",
+    "execa": "^9.6.1",
+    "got": "^15.0.3",
+    "node-fetch": "^3.3.2",
+    "vite": "^8.0.10",
+    "vite-plugin-electron": "^0.29.1",
     "vite-plugin-electron-renderer": "workspace:*"
   }
 }

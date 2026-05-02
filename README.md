@@ -87,7 +87,10 @@ export interface RendererOptions {
       /** Full custom how to pre-bundle */
       build?: (args: {
         cjs: (module: string) => Promise<string>
-        esm: (module: string, buildOptions?: import('esbuild').BuildOptions) => Promise<string>
+        esm: (
+          module: string,
+          buildOptions?: import('vite').BuildOptions['rolldownOptions'],
+        ) => Promise<string>
       }) => Promise<string>
     }
   }
@@ -132,8 +135,8 @@ export interface RendererOptions {
 <!--
 ###### Electron-Renderer(vite build)
 
-1. Add "fs module" to `rollupOptions.external`.
-2. Modify `rollupOptions.output.format` to `cjs` *(If it you didn't explicitly set it)*.
+1. Add "fs module" to `rolldownOptions.external`.
+2. Modify `rolldownOptions.output.format` to `cjs` *(If it you didn't explicitly set it)*.
 
 ```js
 import { ipcRenderer } from 'electron'
@@ -209,7 +212,7 @@ Doing so will reduce the size of the packaged APP by [electron-builder](https://
 If you do not configure the following options, the plugin will modify their default values
 
 - `build.cssCodeSplit = false` (*TODO*)
-- `build.rollupOptions.output.format = 'cjs'` (nodeIntegration: true)
+- `build.rolldownOptions.output.format = 'cjs'` (nodeIntegration: true)
 - `resolve.conditions = ['node']`
 - `optimizeDeps.exclude = ['electron']` - always
 -->

@@ -9,23 +9,25 @@ export default function cjsShim(): Plugin {
   return {
     name: 'vite-plugin-electron-renderer:cjs-shim',
     apply: 'build',
-    config(config) {
-      // Assets are not loaded correctly under CJS, so some default build options need to be changed here
-      config.build ??= {}
+    config: {
+      handler(config) {
+        // Assets are not loaded correctly under CJS, so some default build options need to be changed here
+        config.build ??= {}
 
-      // https://github.com/electron-vite/electron-vite-vue/issues/107
-      config.build.cssCodeSplit ??= false
+        // https://github.com/electron-vite/electron-vite-vue/issues/107
+        config.build.cssCodeSplit ??= false
 
-      // This ensures that static resources are loaded correctly, such as images, `worker.js`
-      // BWT, the `.js` file can be loaded correctly with `<script id="shim-require-id">`
-      // This causes BUG in ESN
-      config.build.assetsDir ??= ''
-      // TODO: compatible with custom assetsDir for static resources
+        // This ensures that static resources are loaded correctly, such as images, `worker.js`
+        // BWT, the `.js` file can be loaded correctly with `<script id="shim-require-id">`
+        // This causes BUG in ESN
+        config.build.assetsDir ??= ''
+        // TODO: compatible with custom assetsDir for static resources
+      },
     },
     configResolved(_config) {
       config = _config
 
-      const output = config.build.rollupOptions.output
+      const output = config.build.rolldownOptions.output
       if (output) {
         // https://github.com/electron-vite/vite-plugin-electron/issues/6
         // https://github.com/electron-vite/vite-plugin-electron/commit/e6decf42164bc1e3801e27984322c41b9c2724b7#r75138942
@@ -39,18 +41,20 @@ export default function cjsShim(): Plugin {
         }
       }
     },
-    transformIndexHtml(html) {
-      if (!isCjs) {
-        return
-      }
+    transformIndexHtml: {
+      order: 'pre',
+      handler(html) {
+        if (!isCjs) {
+          return
+        }
 
-      const headRE = /(<\s*?head\s*?>)/
-      const assetsDir = config.build.assetsDir
+        const headRE = /(<\s*?head\s*?>)/
+        const assetsDir = config.build.assetsDir
 
-      if (assetsDir) {
-        // ---------------------------------------- shim-require-id
-        // TODO: https://github.com/electron-vite/vite-plugin-electron-renderer/blob/v0.14.1/src/index.ts#L348-L349
-        const requireIdShim = `<script id="shim-require-id">
+        if (assetsDir) {
+          // ---------------------------------------- shim-require-id
+          // TODO: https://github.com/electron-vite/vite-plugin-electron-renderer/blob/v0.14.1/src/index.ts#L348-L349
+          const requireIdShim = `<script id="shim-require-id">
 ; (function () {
   if (typeof require !== 'function') return;
   var Module = require('module');
@@ -69,15 +73,16 @@ export default function cjsShim(): Plugin {
   };
 })();
 </script>`
-        html = html.replace(headRE, `$1\n${requireIdShim}`)
-      }
+          html = html.replace(headRE, `$1\n${requireIdShim}`)
+        }
 
-      // ---------------------------------------- shim-exports
-      // fix(🐞): `exports is not defined` in "use strict"
-      const exportsShim = `<script id="shim-exports">var exports = typeof module !== 'undefined' ? module.exports : {};</script>`
-      html = html.replace(headRE, `$1\n${exportsShim}`)
+        // ---------------------------------------- shim-exports
+        // fix(🐞): `exports is not defined` in "use strict"
+        const exportsShim = `<script id="shim-exports">var exports = typeof module !== 'undefined' ? module.exports : {};</script>`
+        html = html.replace(headRE, `$1\n${exportsShim}`)
 
-      return html
+        return html
+      },
     },
   }
 }
