@@ -2,14 +2,15 @@ import fs from 'node:fs'
 import { createRequire, builtinModules } from 'node:module'
 import path from 'node:path'
 
-import type { Alias, BuildOptions, Plugin as VitePlugin, ResolvedConfig, UserConfig } from 'vite'
-import { createBuilder } from 'vite'
+import type { Alias, BuildOptions, Logger, Plugin as VitePlugin, UserConfig } from 'vite'
+import { createBuilder, createLogger } from 'vite'
 
 const require = createRequire(import.meta.url)
 const builtins = builtinModules.filter((m) => !m.startsWith('_'))
 const electronBuiltins = ['electron', ...builtins, ...builtins.map((module) => `node:${module}`)]
 const CACHE_DIR = '.vite-electron-renderer'
 const TAG = '[electron-renderer]'
+export const logger: Logger = createLogger('info', { prefix: TAG })
 const IDENTIFIER_RE = /^[$A-Z_][0-9A-Z_$]*$/i
 const KEYWORDS = new Set([
   'abstract',
@@ -231,7 +232,6 @@ export interface RendererOptions {
 export default function renderer(options: RendererOptions = {}): VitePlugin {
   let root: string
   let cacheDir: string
-  let logger: ResolvedConfig['logger']
   const resolveKeys: string[] = []
   const moduleCache = new Map<string, string>()
 
@@ -267,9 +267,7 @@ export default function renderer(options: RendererOptions = {}): VitePlugin {
                   fs.writeFileSync(
                     // lazy build
                     id,
-                    source === 'electron'
-                      ? electron
-                      : getSnippets({ import: source, export: source }),
+                    source === 'electron' ? electron : getSnippets(source),
                   )
                 }
 
@@ -298,8 +296,7 @@ export default function renderer(options: RendererOptions = {}): VitePlugin {
 
                     if (typeof resolved.build === 'function') {
                       snippets = await resolved.build({
-                        cjs: (module) =>
-                          Promise.resolve(getSnippets({ import: module, export: module })),
+                        cjs: (module) => Promise.resolve(getSnippets(module)),
                         esm: (module, buildOptions) =>
                           getPreBundleSnippets({
                             module,
@@ -309,7 +306,7 @@ export default function renderer(options: RendererOptions = {}): VitePlugin {
                           }),
                       })
                     } else if (resolved.type === 'cjs') {
-                      snippets = getSnippets({ import: source, export: source })
+                      snippets = getSnippets(source)
                     } else if (resolved.type === 'esm') {
                       snippets = await getPreBundleSnippets({
                         module: source,
@@ -318,7 +315,7 @@ export default function renderer(options: RendererOptions = {}): VitePlugin {
                       })
                     }
 
-                    logger.info(`${TAG} pre-bundling ${source}`, { timestamp: true })
+                    logger.info(`pre-bundling ${source}`, { timestamp: true })
 
                     ensureDir(path.dirname(filename))
                     fs.writeFileSync(filename, snippets ?? `/* ${TAG}: empty */`)
@@ -358,7 +355,6 @@ export default function renderer(options: RendererOptions = {}): VitePlugin {
     configResolved(config) {
       root = config.root
       cacheDir = path.posix.join(path.posix.dirname(config.cacheDir), CACHE_DIR)
-      logger = config.logger
     },
   }
 }
@@ -419,16 +415,14 @@ function modifyAlias(config: UserConfig, aliases: Alias[]) {
   ;(config.resolve.alias as Alias[]).push(...aliases)
 }
 
-function getSnippets(module: { import: string; export: string }) {
-  const exports = getExportSnippets(
-    Object.getOwnPropertyNames(/* not await import */ require(module.import)),
-  )
-
+function getSnippets(moduleImport: string, moduleExport = moduleImport) {
   // If a module is a CommonJs, use the `require()` load it can bring better performance,
   // especially it is a C/C++ module, this can avoid a lot of trouble
 
   // `avoid_parse_require` can be avoid Vite transforms parsing `require()`
-  return `const avoid_parse_require = require; const _M_ = avoid_parse_require(${JSON.stringify(module.export)});\n${exports}`
+  return `const avoid_parse_require = require; const _M_ = avoid_parse_require(${JSON.stringify(moduleExport)});\n${getExportSnippets(
+    Object.getOwnPropertyNames(/* not await import */ require(moduleImport)),
+  )}`
 }
 
 async function getPreBundleSnippets(options: {
@@ -462,13 +456,13 @@ async function getPreBundleSnippets(options: {
         emptyOutDir: false,
         lib: {
           entry,
-          fileName: () => path.posix.basename(outfile),
+          fileName: () => `${module}.cjs`,
           formats: ['cjs'],
         },
         minify: false,
+        outDir: outdir,
         sourcemap: 'inline',
         target: 'node14',
-        write: false,
         rolldownOptions: mergePreBundleBuildOptions(buildOptions),
       },
     },
@@ -481,8 +475,7 @@ async function getPreBundleSnippets(options: {
       throw new TypeError(`Unable to create a Vite build environment for ${JSON.stringify(module)}`)
     }
 
-    const outputs = await builder.build(environment)
-    writeRolldownOutput(Array.isArray(outputs) ? outputs : [outputs], outdir)
+    await builder.build(environment)
   } finally {
     fs.rmSync(entry, { force: true })
   }
@@ -492,11 +485,8 @@ async function getPreBundleSnippets(options: {
     outfile,
   )
 
-  return getSnippets({
-    import: outfile,
-    // `require()` in script-module lookup path based on `process.cwd()` 🤔
-    export: requirePath.startsWith('.') ? requirePath : `./${requirePath}`,
-  })
+  // `require()` in script-module lookup path based on `process.cwd()` 🤔
+  return getSnippets(outfile, requirePath.startsWith('.') ? requirePath : `./${requirePath}`)
 }
 
 function ensureDir(dirname: string) {
@@ -583,27 +573,4 @@ function mergeOutputOptions(output: NonNullable<BuildOptions['rolldownOptions']>
   return Array.isArray(output)
     ? output.map((item) => ({ ...defaults, ...item }))
     : { ...defaults, ...output }
-}
-
-function writeRolldownOutput(
-  outputs: Array<{ output: Array<Record<string, unknown>> }>,
-  outdir: string,
-) {
-  for (const output of outputs) {
-    for (const chunk of output.output) {
-      const filename = path.posix.join(outdir, chunk.fileName as string)
-      ensureDir(path.dirname(filename))
-      if (chunk.type === 'asset') {
-        const source = chunk.source
-        fs.writeFileSync(
-          filename,
-          typeof source === 'string' || source instanceof Uint8Array
-            ? source
-            : String(source ?? ''),
-        )
-      } else {
-        fs.writeFileSync(filename, String(chunk.code ?? ''))
-      }
-    }
-  }
 }
