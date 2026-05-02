@@ -10,8 +10,8 @@ import { default as renderer, electron as electronSnippets } from '..'
 
 import { builtins } from './config.test'
 
-const CACHE_DIR = path.join(__dirname, '../node_modules/.vite-electron-renderer')
 const fixtures = path.join(__dirname, 'fixtures')
+const CACHE_DIR = path.join(fixtures, 'node_modules/.vite-electron-renderer')
 const renderer_resolve: RendererOptions['resolve'] = {
   serialport: { type: 'cjs' },
   'node-fetch': { type: 'esm' },

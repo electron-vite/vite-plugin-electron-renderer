@@ -7,8 +7,8 @@ settings:
 catalogs:
   default:
     electron:
-      specifier: 41.5.0
-      version: 41.5.0
+      specifier: 40.9.1
+      version: 40.9.1
 
 overrides:
   '@electron/get': 5.0.0
@@ -23,18 +23,12 @@ importers:
       defu:
         specifier: ^6.1.7
         version: 6.1.7
-      node-fetch:
-        specifier: ^3.3.2
-        version: 3.3.2
       oxfmt:
         specifier: ^0.47.0
         version: 0.47.0
       oxlint:
         specifier: ^1.62.0
         version: 1.62.0
-      serialport:
-        specifier: ^13.0.0
-        version: 13.0.0
       tsdown:
         specifier: ^0.21.10
         version: 0.21.10(typescript@6.0.3)
@@ -59,7 +53,7 @@ importers:
     devDependencies:
       electron:
         specifier: 'catalog:'
-        version: 41.5.0
+        version: 40.9.1
       electron-builder:
         specifier: ^26.8.1
         version: 26.8.1(electron-builder-squirrel-windows@26.8.1)
@@ -89,7 +83,7 @@ importers:
     devDependencies:
       electron:
         specifier: 'catalog:'
-        version: 41.5.0
+        version: 40.9.1
       electron-builder:
         specifier: ^26.8.1
         version: 26.8.1(electron-builder-squirrel-windows@26.8.1)
@@ -105,6 +99,15 @@ importers:
       vite-plugin-electron-renderer:
         specifier: workspace:*
         version: link:../..
+
+  test/fixtures:
+    dependencies:
+      node-fetch:
+        specifier: ^3.3.2
+        version: 3.3.2
+      serialport:
+        specifier: ^13.0.0
+        version: 13.0.0
 
 packages:
 
@@ -1073,8 +1076,8 @@ packages:
     resolution: {integrity: sha512-bO3y10YikuUwUuDUQRM4KfwNkKhnpVO7IPdbsrejwN9/AABJzzTQ4GeHwyzNSrVO+tEH3/Np255a3sVZpZDjvg==}
     engines: {node: '>=8.0.0'}
 
-  electron@41.5.0:
-    resolution: {integrity: sha512-x9j9//PubUA4EjDtQbZhtk3prolandqCKgit0uCIqc1jb8FTskPbnJtxcDFB1aejczJcuERgjPixBUaMwoWyJg==}
+  electron@40.9.1:
+    resolution: {integrity: sha512-dgUqGjpTJeLZQEbvZQlnjMtPCUfOGRBNJIYjw8yC2ZN9O1QS172r09trhLke+rC8JCLBGbf2DeU63AArd0tbhQ==}
     engines: {node: '>= 12.20.55'}
     hasBin: true
 
@@ -2587,7 +2590,7 @@ snapshots:
   '@serialport/binding-mock@10.2.2':
     dependencies:
       '@serialport/bindings-interface': 1.2.2
-      debug: 4.4.0
+      debug: 4.4.3
     transitivePeerDependencies:
       - supports-color
 
@@ -2698,7 +2701,7 @@ snapshots:
 
   '@types/yauzl@2.10.3':
     dependencies:
-      '@types/node': 24.12.2
+      '@types/node': 25.6.0
     optional: true
 
   '@vitest/expect@4.1.5':
@@ -3162,7 +3165,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  electron@41.5.0:
+  electron@40.9.1:
     dependencies:
       '@electron/get': 5.0.0
       '@types/node': 24.12.2

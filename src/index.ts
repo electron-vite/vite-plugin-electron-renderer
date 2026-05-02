@@ -2,17 +2,15 @@ import fs from 'node:fs'
 import { createRequire, builtinModules } from 'node:module'
 import path from 'node:path'
 
-import type { Alias, BuildOptions, Plugin as VitePlugin, UserConfig } from 'vite'
-import { createBuilder, normalizePath } from 'vite'
+import type { Alias, BuildOptions, Plugin as VitePlugin, ResolvedConfig, UserConfig } from 'vite'
+import { createBuilder } from 'vite'
 
 const require = createRequire(import.meta.url)
 const builtins = builtinModules.filter((m) => !m.startsWith('_'))
 const electronBuiltins = ['electron', ...builtins, ...builtins.map((module) => `node:${module}`)]
 const CACHE_DIR = '.vite-electron-renderer'
 const TAG = '[electron-renderer]'
-const cwd = normalizePath(process.cwd())
 const IDENTIFIER_RE = /^[$A-Z_][0-9A-Z_$]*$/i
-const WINDOWS_VOLUME_RE = /^[A-Z]:/i
 const KEYWORDS = new Set([
   'abstract',
   'arguments',
@@ -85,16 +83,6 @@ const KEYWORDS = new Set([
   'with',
   'yield',
 ])
-/**
- * @see https://stackoverflow.com/questions/9781218/how-to-change-node-jss-console-font-color
- * @see https://en.wikipedia.org/wiki/ANSI_escape_code#Colors
- */
-const COLOURS = {
-  $: (colour: number) => (str: string) => `\x1B[${colour}m${str}\x1B[0m`,
-  gray: (str: string) => COLOURS.$(90)(str),
-  cyan: (str: string) => COLOURS.$(36)(str),
-  yellow: (str: string) => COLOURS.$(33)(str),
-}
 const electronMainApis: {
   name: string
   evns: ('Main' | 'Renderer' | 'Utility')[]
@@ -243,6 +231,7 @@ export interface RendererOptions {
 export default function renderer(options: RendererOptions = {}): VitePlugin {
   let root: string
   let cacheDir: string
+  let logger: ResolvedConfig['logger']
   const resolveKeys: string[] = []
   const moduleCache = new Map<string, string>()
 
@@ -252,9 +241,6 @@ export default function renderer(options: RendererOptions = {}): VitePlugin {
       async handler(config, { command }) {
         resolveKeys.length = 0
         moduleCache.clear()
-        root = normalizePath(config.root ? path.resolve(config.root) : cwd)
-
-        cacheDir = path.posix.join(findNodeModules(root)[0] ?? cwd, CACHE_DIR)
 
         for (const [key, option] of Object.entries(options.resolve ?? {})) {
           if (command === 'build' && option.type === 'esm') {
@@ -332,11 +318,7 @@ export default function renderer(options: RendererOptions = {}): VitePlugin {
                       })
                     }
 
-                    console.log(
-                      COLOURS.gray(TAG),
-                      COLOURS.cyan('pre-bundling'),
-                      COLOURS.yellow(source),
-                    )
+                    logger.info(`${TAG} pre-bundling ${source}`, { timestamp: true })
 
                     ensureDir(path.dirname(filename))
                     fs.writeFileSync(filename, snippets ?? `/* ${TAG}: empty */`)
@@ -372,6 +354,11 @@ export default function renderer(options: RendererOptions = {}): VitePlugin {
 
         adaptElectron(config)
       },
+    },
+    configResolved(config) {
+      root = config.root
+      cacheDir = path.posix.join(path.posix.dirname(config.cacheDir), CACHE_DIR)
+      logger = config.logger
     },
   }
 }
@@ -503,9 +490,7 @@ async function getPreBundleSnippets(options: {
   return getSnippets({
     import: outfile,
     // `require()` in script-module lookup path based on `process.cwd()` 🤔
-    export: relativeify(
-      path.posix.relative(path.posix.dirname(`${path.posix.join(outdir, module)}.mjs`), outfile),
-    ),
+    export: `./${path.posix.basename(outfile)}`,
   })
 }
 
@@ -616,33 +601,4 @@ function writeRolldownOutput(
       }
     }
   }
-}
-
-function relativeify(relativePath: string) {
-  if (relativePath === '') {
-    return '.'
-  }
-  if (!/^\.{1,2}[/\\]/.test(relativePath)) {
-    return `./${relativePath}`
-  }
-  return relativePath
-}
-
-function findNodeModules(root: string) {
-  const paths: string[] = []
-  let currentRoot = normalizePath(root)
-
-  while (currentRoot && (currentRoot.startsWith('/') || WINDOWS_VOLUME_RE.test(currentRoot))) {
-    const candidate = path.posix.join(currentRoot, 'node_modules')
-    if (fs.existsSync(candidate) && fs.statSync(candidate).isDirectory()) {
-      paths.push(candidate)
-    }
-
-    if (currentRoot === '/' || /^[A-Z]:$/i.test(currentRoot)) {
-      break
-    }
-    currentRoot = path.posix.dirname(currentRoot)
-  }
-
-  return paths
 }

@@ -1,9 +1,10 @@
 packages:
   - '.'
   - 'examples/*'
+  - 'test/fixtures'
 
 catalog:
-  electron: 41.5.0
+  electron: 40.9.1
 
 onlyBuiltDependencies:
   - electron
