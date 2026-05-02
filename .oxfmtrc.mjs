@@ -1,3 +1,3 @@
-import { CONFIG } from '@subf/config/oxfmt'
+import { subfFmt } from '@subf/config/oxfmt'
 
-export default CONFIG
+export default subfFmt()
