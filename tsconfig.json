@@ -1,7 +1,4 @@
 {
   "extends": "@subf/config/tsconfig-lib",
-  "compilerOptions": {
-    "resolveJsonModule": true
-  },
   "include": ["src"]
 }
