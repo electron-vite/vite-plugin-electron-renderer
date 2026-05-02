@@ -1,5 +1,7 @@
 import type { ResolvedConfig, Plugin } from 'vite'
 
+const CJS_FORMATS = new Set(['cjs', 'commonjs'])
+
 export default function cjsShim(): Plugin {
   let config: ResolvedConfig
   let isCjs: boolean
@@ -25,15 +27,13 @@ export default function cjsShim(): Plugin {
 
       const output = config.build.rollupOptions.output
       if (output) {
-        const formats = new Set(['cjs', 'commonjs'])
-
         // https://github.com/electron-vite/vite-plugin-electron/issues/6
         // https://github.com/electron-vite/vite-plugin-electron/commit/e6decf42164bc1e3801e27984322c41b9c2724b7#r75138942
         if (
           Array.isArray(output)
             ? // Once an `output.format` is CJS, it is considered as CommonJs
-              output.find((o) => formats.has(o.format as string))
-            : formats.has(output.format as string)
+              output.find((o) => CJS_FORMATS.has(o.format as string))
+            : CJS_FORMATS.has(output.format as string)
         ) {
           isCjs = true
         }

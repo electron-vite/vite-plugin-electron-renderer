@@ -70,11 +70,15 @@ describe('optimizer', async () => {
 
     const plugin_renderer = renderer({ resolve: renderer_resolve })
     const plugin_renderer_config = plugin_renderer.config
+    if (!plugin_renderer_config) {
+      throw new TypeError('renderer plugin is missing a config hook')
+    }
+
     plugin_renderer.config = function plugin_renderer(config, env) {
       // For force pre-bundling `esm` module
       // https://github.com/electron-vite/vite-plugin-electron-renderer/blob/v0.14.3/src/index.ts#L133-L137
       env.command = 'serve'
-      return plugin_renderer_config?.call(plugin_renderer, config, env)
+      return plugin_renderer_config.call(plugin_renderer, config, env)
     }
 
     await viteBuild({

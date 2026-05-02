@@ -325,7 +325,7 @@ function withIgnore(configBuild: BuildOptions, modules: string[]) {
         return modules.includes(id)
       }
     } else {
-      // @ts-expect-error `ignore` is either an array or a function.
+      // @ts-expect-error TypeScript does not narrow this branch from function to array.
       configBuild.commonjsOptions.ignore.push(...modules)
     }
   } else {

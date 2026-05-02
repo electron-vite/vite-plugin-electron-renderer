@@ -5,6 +5,10 @@ document.getElementById('app')!.innerHTML = `
 let worker: Worker | undefined
 
 document.getElementById('worker')!.addEventListener('click', () => {
-  worker?.terminate()
+  if (worker) {
+    worker.terminate()
+    worker = undefined
+  }
+
   worker = new Worker(new URL('./worker.ts', import.meta.url), { type: 'module' })
 })
