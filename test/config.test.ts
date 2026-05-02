@@ -1,23 +1,16 @@
 import { builtinModules } from 'node:module'
-import {
-  type UserConfig,
-  resolveConfig,
-} from 'vite'
-import type {
-  OutputOptions,
-  RollupOptions,
-} from 'rollup'
-import {
-  describe,
-  expect,
-  it,
-} from 'vitest'
+
+import type { OutputOptions, RollupOptions } from 'rollup'
+import type { UserConfig } from 'vite'
+import { resolveConfig } from 'vite'
+import { describe, expect, it } from 'vitest'
+
 import renderer from '..'
 
 export const builtins = [
   'electron',
-  ...builtinModules.filter(m => !m.startsWith('_')),
-  ...builtinModules.filter(m => !m.startsWith('_')).map(mod => `node:${mod}`),
+  ...builtinModules.filter((m) => !m.startsWith('_')),
+  ...builtinModules.filter((m) => !m.startsWith('_')).map((mod) => `node:${mod}`),
 ]
 
 describe('config', () => {
@@ -51,49 +44,61 @@ describe('config', () => {
   }) */
 
   it('base', async () => {
-    const config = await resolveConfig({
-      configFile: false,
-      plugins: [renderer()],
-    }, 'build')
+    const config = await resolveConfig(
+      {
+        configFile: false,
+        plugins: [renderer()],
+      },
+      'build',
+    )
 
     expect(config.base).equal('./')
   })
 
   it('rollup.output', async () => {
-    const getConfig = (output: RollupOptions['output']) => resolveConfig({
-      configFile: false,
-      build: {
-        rollupOptions: {
-          output,
+    const getConfig = (output: RollupOptions['output']) =>
+      resolveConfig(
+        {
+          configFile: false,
+          build: {
+            rollupOptions: {
+              output,
+            },
+          },
+          plugins: [renderer()],
         },
-      },
-      plugins: [renderer()],
-    }, 'build')
+        'build',
+      )
 
     const output = (await getConfig({})).build.rollupOptions.output as OutputOptions
-    expect(output.freeze).false
+    expect(output.freeze).toBe(false)
 
     const outputArr = (await getConfig([{}])).build.rollupOptions.output as OutputOptions[]
     for (const out of outputArr) {
-      expect(out.freeze).false
+      expect(out.freeze).toBe(false)
     }
   })
 
   it('commonjs', async () => {
-    const getConfig = (commonjsOptions: NonNullable<UserConfig['build']>['commonjsOptions']) => resolveConfig({
-      configFile: false,
-      build: {
-        commonjsOptions,
-      },
-      plugins: [renderer()],
-    }, 'build')
+    const getConfig = (commonjsOptions: NonNullable<UserConfig['build']>['commonjsOptions']) =>
+      resolveConfig(
+        {
+          configFile: false,
+          build: {
+            commonjsOptions,
+          },
+          plugins: [renderer()],
+        },
+        'build',
+      )
 
     const ignore_array = (await getConfig({ ignore: builtins })).build.commonjsOptions.ignore
     expect(ignore_array).equal(builtins)
 
-    const ignore_function = (await getConfig({ ignore: id => builtins.includes(id) })).build.commonjsOptions.ignore as (id: string) => boolean
+    const ignore_function = (await getConfig({ ignore: (id) => builtins.includes(id) })).build
+      .commonjsOptions.ignore as (id: string) => boolean
     for (const builtin of builtins) {
-      expect(ignore_function(builtin)).true
+      expect(ignore_function(builtin)).toBe(true)
     }
   })
 })

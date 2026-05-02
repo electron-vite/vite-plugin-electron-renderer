@@ -103,9 +103,7 @@ export default {
       },
     },
   },
-  plugins: [
-    cjsShim(),
-  ],
+  plugins: [cjsShim()],
 }
 ```
 
@@ -132,30 +130,32 @@ export default {
 
 `0.13.8` is very compact, keeping only the API for handling `C/C++` modules.
 
-
 `renderer(options: RendererOptions)`
 
-```ts
+````ts
 export interface RendererOptions {
   /**
-   * Explicitly tell Vite how to load modules, which is very useful for C/C++ modules.  
-   * Most of the time, you don't need to use it when a module is a C/C++ module, you can load them by return `{ platform: 'node' }`.  
-   * 
-   * If you know exactly how Vite works, you can customize the return snippets.  
+   * Explicitly tell Vite how to load modules, which is very useful for C/C++ modules.
+   * Most of the time, you don't need to use it when a module is a C/C++ module, you can load them by return `{ platform: 'node' }`.
+   *
+   * If you know exactly how Vite works, you can customize the return snippets.
    * `e.g.`
    * ```js
    * renderer({
    *   resolve: (id) => `const lib = require("${id}");\nexport default lib.default || lib;`
    * })
    * ```
-   * 
+   *
    * @experimental
    */
   resolve?: {
-    [id: string]: (() => string | { platform: 'browser' | 'node' } | Promise<string | { platform: 'browser' | 'node' }>)
+    [id: string]: () =>
+      | string
+      | { platform: 'browser' | 'node' }
+      | Promise<string | { platform: 'browser' | 'node' }>
   }
 }
-```
+````
 
 **Here is an example using serialport**
 
@@ -272,7 +272,7 @@ Since `0.13.0`, Pre-Bundling will be handled automatically within the plugin
 ## 0.11.2 (2022-11-18)
 
 1. Pre-Bundling Node.js built-in modules by default.
-2. Fixed incorrect loading of static resources *(It does not support custom assetsDir)*.
+2. Fixed incorrect loading of static resources _(It does not support custom assetsDir)_.
 
 - ee51908 feat: build built-in modules 🌱
 - 51d5287 fix: `assetsDir` default value
@@ -286,7 +286,7 @@ Since `0.13.0`, Pre-Bundling will be handled automatically within the plugin
 
 #### Break!
 
-1. All Node.js APIs must be Pre-Bundling via `optimizeDeps` *(the 'electron' module does not need to be built)*, this brings the benefit of being able to use it in Web Worker at the same time.
+1. All Node.js APIs must be Pre-Bundling via `optimizeDeps` _(the 'electron' module does not need to be built)_, this brings the benefit of being able to use it in Web Worker at the same time.
 2. Remove `worker()` plugin.
 3. Use Vite to build all source code, and will no longer support importing a plugin separately.
 
@@ -366,7 +366,7 @@ sync `vite-plugin-electron` version
 ## [2022-07-07] v0.5.3
 
 - 69eb531 docs: v0.5.3
-- cc98ed9 feat: `ResolveModules['options']`  optional
+- cc98ed9 feat: `ResolveModules['options']` optional
 - db03a72 chore: remove `useNodeJs.default = useNodeJs`
 - c30dc1b fix(🐞): add `electron` to ` builtins
 

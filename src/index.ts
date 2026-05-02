@@ -1,29 +1,17 @@
 import fs from 'node:fs'
-import path from 'node:path'
 import { createRequire, builtinModules } from 'node:module'
-import type {
-  Alias,
-  BuildOptions,
-  Plugin as VitePlugin,
-  UserConfig,
-} from 'vite'
-import { normalizePath } from 'vite'
+import path from 'node:path'
+
 import esbuild from 'esbuild'
-import type { RollupOptions } from 'rollup'
 import libEsm from 'lib-esm'
-import {
-  COLOURS,
-  node_modules as find_node_modules,
-  relativeify,
-} from 'vite-plugin-utils/function'
+import type { RollupOptions } from 'rollup'
+import type { Alias, BuildOptions, Plugin as VitePlugin, UserConfig } from 'vite'
+import { normalizePath } from 'vite'
+import { COLOURS, node_modules as find_node_modules, relativeify } from 'vite-plugin-utils/function'
 
 const require = createRequire(import.meta.url)
-const builtins = builtinModules.filter(m => !m.startsWith('_'))
-const electronBuiltins = [
-  'electron',
-  ...builtins,
-  ...builtins.map(module => `node:${module}`),
-]
+const builtins = builtinModules.filter((m) => !m.startsWith('_'))
+const electronBuiltins = ['electron', ...builtins, ...builtins.map((module) => `node:${module}`)]
 const CACHE_DIR = '.vite-electron-renderer'
 const TAG = '[electron-renderer]'
 const cwd = normalizePath(process.cwd())
@@ -32,50 +20,50 @@ const electronMainApis: {
   evns: ('Main' | 'Renderer' | 'Utility')[]
   deprecated?: boolean
 }[] = [
-    { name: 'app', evns: ['Main'] },
-    { name: 'autoUpdater', evns: ['Main'] },
-    { name: 'BaseWindow', evns: ['Main'] },
-    { name: 'BrowserView', evns: ['Main'], deprecated: true },
-    { name: 'BrowserWindow', evns: ['Main'] },
-    { name: 'clipboard', evns: ['Main', 'Renderer'] },
-    { name: 'contentTracing', evns: ['Main'] },
-    { name: 'crashReporter', evns: ['Main', 'Renderer'] },
-    { name: 'desktopCapturer', evns: ['Main'] },
-    { name: 'dialog', evns: ['Main'] },
-    { name: 'globalShortcut', evns: ['Main'] },
-    { name: 'inAppPurchase', evns: ['Main'] },
-    { name: 'ipcMain', evns: ['Main'] },
-    { name: 'Menu', evns: ['Main'] },
-    { name: 'MessageChannelMain', evns: ['Main'] },
-    { name: 'MessagePortMain', evns: ['Main'] },
-    { name: 'nativeImage', evns: ['Main', 'Renderer'] },
-    { name: 'nativeTheme', evns: ['Main'] },
-    { name: 'net', evns: ['Main', 'Utility'] },
-    { name: 'netLog', evns: ['Main'] },
-    { name: 'Notification', evns: ['Main'] },
-    { name: 'parentPort', evns: ['Utility'] },
-    { name: 'powerMonitor', evns: ['Main'] },
-    { name: 'powerSaveBlocker', evns: ['Main'] },
-    { name: 'process', evns: ['Main', 'Renderer'] },
-    { name: 'protocol', evns: ['Main'] },
-    { name: 'pushNotifications', evns: ['Main'] },
-    { name: 'safeStorage', evns: ['Main'] },
-    { name: 'screen', evns: ['Main'] },
-    { name: 'session', evns: ['Main'] },
-    { name: 'ShareMenu', evns: ['Main'] },
-    { name: 'shell', evns: ['Main', 'Renderer'] },
-    { name: 'systemPreferences', evns: ['Main', 'Utility'] },
-    { name: 'TouchBar', evns: ['Main'] },
-    { name: 'Tray', evns: ['Main'] },
-    { name: 'utilityProcess', evns: ['Main'] },
-    { name: 'webContents', evns: ['Main'] },
-    { name: 'WebContentsView', evns: ['Main'] },
-    { name: 'webFrameMain', evns: ['Main'] },
-    { name: 'View', evns: ['Main'] },
-  ]
+  { name: 'app', evns: ['Main'] },
+  { name: 'autoUpdater', evns: ['Main'] },
+  { name: 'BaseWindow', evns: ['Main'] },
+  { name: 'BrowserView', evns: ['Main'], deprecated: true },
+  { name: 'BrowserWindow', evns: ['Main'] },
+  { name: 'clipboard', evns: ['Main', 'Renderer'] },
+  { name: 'contentTracing', evns: ['Main'] },
+  { name: 'crashReporter', evns: ['Main', 'Renderer'] },
+  { name: 'desktopCapturer', evns: ['Main'] },
+  { name: 'dialog', evns: ['Main'] },
+  { name: 'globalShortcut', evns: ['Main'] },
+  { name: 'inAppPurchase', evns: ['Main'] },
+  { name: 'ipcMain', evns: ['Main'] },
+  { name: 'Menu', evns: ['Main'] },
+  { name: 'MessageChannelMain', evns: ['Main'] },
+  { name: 'MessagePortMain', evns: ['Main'] },
+  { name: 'nativeImage', evns: ['Main', 'Renderer'] },
+  { name: 'nativeTheme', evns: ['Main'] },
+  { name: 'net', evns: ['Main', 'Utility'] },
+  { name: 'netLog', evns: ['Main'] },
+  { name: 'Notification', evns: ['Main'] },
+  { name: 'parentPort', evns: ['Utility'] },
+  { name: 'powerMonitor', evns: ['Main'] },
+  { name: 'powerSaveBlocker', evns: ['Main'] },
+  { name: 'process', evns: ['Main', 'Renderer'] },
+  { name: 'protocol', evns: ['Main'] },
+  { name: 'pushNotifications', evns: ['Main'] },
+  { name: 'safeStorage', evns: ['Main'] },
+  { name: 'screen', evns: ['Main'] },
+  { name: 'session', evns: ['Main'] },
+  { name: 'ShareMenu', evns: ['Main'] },
+  { name: 'shell', evns: ['Main', 'Renderer'] },
+  { name: 'systemPreferences', evns: ['Main', 'Utility'] },
+  { name: 'TouchBar', evns: ['Main'] },
+  { name: 'Tray', evns: ['Main'] },
+  { name: 'utilityProcess', evns: ['Main'] },
+  { name: 'webContents', evns: ['Main'] },
+  { name: 'WebContentsView', evns: ['Main'] },
+  { name: 'webFrameMain', evns: ['Main'] },
+  { name: 'View', evns: ['Main'] },
+]
 
 /** Electron Renderer process code snippets */
-export const electron = `
+export const electron: string = `
 const electron = typeof require !== 'undefined'
   // All exports module see https://www.electronjs.org -> API -> Renderer process Modules
   ? (function requireElectron() {
@@ -143,27 +131,27 @@ export const webUtils = electron.webUtils;
 // Electron Main process apis
 // Using them in the Renderer process will got undefined, which is required by some third-party npm pkgs
 ${electronMainApis
-    .filter(({ evns }) => evns.length === 1 && evns[0] === 'Main')
-    .map(({ name }) => `export const ${name} = electron.${name};`)
-    .join('\n')}
+  .filter(({ evns }) => evns.length === 1 && evns[0] === 'Main')
+  .map(({ name }) => `export const ${name} = electron.${name};`)
+  .join('\n')}
 `.trim()
 
 export interface RendererOptions {
   /**
    * Explicitly tell Vite how to load modules, which is very useful for C/C++ and `esm` modules
-   * 
+   *
    * - `type.cjs` just wraps esm-interop
    * - `type.esm` pre-bundle to `cjs` and wraps esm-interop
-   * 
-   * @experimental
+   *
+   * Experimental.
    */
   resolve?: {
     [module: string]: {
-      type: 'cjs' | 'esm',
+      type: 'cjs' | 'esm'
       /** Full custom how to pre-bundle */
       build?: (args: {
-        cjs: (module: string) => Promise<string>,
-        esm: (module: string, buildOptions?: import('esbuild').BuildOptions) => Promise<string>,
+        cjs: (module: string) => Promise<string>
+        esm: (module: string, buildOptions?: import('esbuild').BuildOptions) => Promise<string>
       }) => Promise<string>
     }
   }
@@ -193,89 +181,97 @@ export default function renderer(options: RendererOptions = {}): VitePlugin {
       }
 
       // builtins
-      const aliases: Alias[] = [{
-        find: new RegExp(`^(?:node:)?(${['electron', ...builtins].join('|')})$`),
-        // https://github.com/rollup/plugins/blob/alias-v5.0.0/packages/alias/src/index.ts#L90
-        replacement: '$1',
-        async customResolver(source) {
-          let id = moduleCache.get(source)
-          if (!id) {
-            id = path.posix.join(cacheDir, source) + '.mjs'
+      const aliases: Alias[] = [
+        {
+          find: new RegExp(`^(?:node:)?(${['electron', ...builtins].join('|')})$`),
+          // https://github.com/rollup/plugins/blob/alias-v5.0.0/packages/alias/src/index.ts#L90
+          replacement: '$1',
+          async customResolver(source) {
+            let id = moduleCache.get(source)
+            if (!id) {
+              id = `${path.posix.join(cacheDir, source)}.mjs`
 
-            if (!fs.existsSync(id)) {
-              ensureDir(path.dirname(id))
-              fs.writeFileSync( // lazy build
-                id,
-                source === 'electron' ? electron : getSnippets({ import: source, export: source }),
-              )
+              if (!fs.existsSync(id)) {
+                ensureDir(path.dirname(id))
+                fs.writeFileSync(
+                  // lazy build
+                  id,
+                  source === 'electron'
+                    ? electron
+                    : getSnippets({ import: source, export: source }),
+                )
+              }
+
+              moduleCache.set(source, id)
             }
-
-            moduleCache.set(source, id)
-          }
-          return { id }
+            return { id }
+          },
         },
-      }]
+      ]
 
       // options.resolve (🚧-① only `type:cjs`)
-      resolveKeys.length && aliases.push({
-        find: new RegExp(`^(${resolveKeys.join('|')})$`),
-        replacement: '$1',
-        async customResolver(source, importer, resolveOptions) {
-          let id = moduleCache.get(source)
-          if (!id) {
-            const filename = path.posix.join(cacheDir, source) + '.mjs'
-            if (fs.existsSync(filename)) {
-              id = filename
-            } else {
-              const resolved = options.resolve?.[source]
-              if (resolved) {
-                let snippets: string | undefined
-
-                if (typeof resolved.build === 'function') {
-                  snippets = await resolved.build({
-                    cjs: module => Promise.resolve(getSnippets({ import: module, export: module })),
-                    esm: (module, buildOptions) => getPreBundleSnippets({
-                      module,
-                      outdir: cacheDir,
-                      buildOptions,
-                    }),
-                  })
-                } else if (resolved.type === 'cjs') {
-                  snippets = getSnippets({ import: source, export: source })
-                } else if (resolved.type === 'esm') {
-                  snippets = await getPreBundleSnippets({
-                    module: source,
-                    outdir: cacheDir,
-                  })
-                }
-
-                console.log(
-                  COLOURS.gary(TAG),
-                  COLOURS.cyan('pre-bundling'),
-                  COLOURS.yellow(source),
-                )
-
-                ensureDir(path.dirname(filename))
-                fs.writeFileSync(filename, snippets ?? `/* ${TAG}: empty */`)
+      resolveKeys.length &&
+        aliases.push({
+          find: new RegExp(`^(${resolveKeys.join('|')})$`),
+          replacement: '$1',
+          async customResolver(source, importer, resolveOptions) {
+            let id = moduleCache.get(source)
+            if (!id) {
+              const filename = `${path.posix.join(cacheDir, source)}.mjs`
+              if (fs.existsSync(filename)) {
                 id = filename
               } else {
-                id = source
+                const resolved = options.resolve?.[source]
+                if (resolved) {
+                  let snippets: string | undefined
+
+                  if (typeof resolved.build === 'function') {
+                    snippets = await resolved.build({
+                      cjs: (module) =>
+                        Promise.resolve(getSnippets({ import: module, export: module })),
+                      esm: (module, buildOptions) =>
+                        getPreBundleSnippets({
+                          module,
+                          outdir: cacheDir,
+                          buildOptions,
+                        }),
+                    })
+                  } else if (resolved.type === 'cjs') {
+                    snippets = getSnippets({ import: source, export: source })
+                  } else if (resolved.type === 'esm') {
+                    snippets = await getPreBundleSnippets({
+                      module: source,
+                      outdir: cacheDir,
+                    })
+                  }
+
+                  console.log(
+                    COLOURS.gary(TAG),
+                    COLOURS.cyan('pre-bundling'),
+                    COLOURS.yellow(source),
+                  )
+
+                  ensureDir(path.dirname(filename))
+                  fs.writeFileSync(filename, snippets ?? `/* ${TAG}: empty */`)
+                  id = filename
+                } else {
+                  id = source
+                }
               }
+
+              moduleCache.set(source, id)
             }
 
-            moduleCache.set(source, id)
-          }
-
-          return id === source
-            // https://github.com/rollup/plugins/blob/alias-v5.0.0/packages/alias/src/index.ts#L96-L100
-            ? this.resolve(
-              source,
-              importer,
-              Object.assign({ skipSelf: true }, resolveOptions),
-            ).then((resolved) => resolved || { id: source })
-            : { id }
-        },
-      })
+            return id === source
+              ? // https://github.com/rollup/plugins/blob/alias-v5.0.0/packages/alias/src/index.ts#L96-L100
+                this.resolve(
+                  source,
+                  importer,
+                  Object.assign({ skipSelf: true }, resolveOptions),
+                ).then((resolved) => resolved || { id: source })
+              : { id }
+          },
+        })
 
       // Why is the builtin modules loaded by modifying `resolve.alias` instead of using the plugin `resolveId` + `load` hooks?
       // `resolve.alias` has a very high priority in Vite! it works on Pre-Bundling, build, serve, ssr etc. anywhere
@@ -322,15 +318,15 @@ function withIgnore(configBuild: BuildOptions, modules: string[]) {
   if (configBuild.commonjsOptions.ignore) {
     if (typeof configBuild.commonjsOptions.ignore === 'function') {
       const userIgnore = configBuild.commonjsOptions.ignore
-      configBuild.commonjsOptions.ignore = id => {
+      configBuild.commonjsOptions.ignore = (id) => {
         if (userIgnore?.(id) === true) {
           return true
         }
         return modules.includes(id)
       }
     } else {
-      // @ts-ignore
-      configBuild.commonjsOptions.ignore.push(...modules)
+      const ignore = configBuild.commonjsOptions.ignore as string[]
+      ignore.push(...modules)
     }
   } else {
     configBuild.commonjsOptions.ignore = modules
@@ -352,25 +348,25 @@ function modifyAlias(config: UserConfig, aliases: Alias[]) {
   config.resolve ??= {}
   config.resolve.alias ??= []
   if (Object.prototype.toString.call(config.resolve.alias) === '[object Object]') {
-    config.resolve.alias = Object
-      .entries(config.resolve.alias)
-      .reduce<Alias[]>((memo, [find, replacement]) => memo.concat({ find, replacement }), [])
+    config.resolve.alias = Object.entries(config.resolve.alias).reduce<Alias[]>(
+      (memo, [find, replacement]) => memo.concat({ find, replacement }),
+      [],
+    )
   }
   // Push the `aliases` to the end of `config.resolve.alias`, which means that `config.resolve.alias` has a higher priority. #82
-  (config.resolve.alias as Alias[]).push(...aliases)
+  ;(config.resolve.alias as Alias[]).push(...aliases)
 }
 
-function getSnippets(module: {
-  import: string,
-  export: string,
-}) {
-  const { exports } = libEsm({ exports: Object.getOwnPropertyNames(/* not await import */require(module.import)) })
+function getSnippets(module: { import: string; export: string }) {
+  const { exports } = libEsm({
+    exports: Object.getOwnPropertyNames(/* not await import */ require(module.import)),
+  })
 
-  // If a module is a CommonJs, use the `require()` load it can bring better performance, 
+  // If a module is a CommonJs, use the `require()` load it can bring better performance,
   // especially it is a C/C++ module, this can avoid a lot of trouble
 
   // `avoid_parse_require` can be avoid `esbuild.build`, `@rollup/plugin-commonjs`
-  return `const avoid_parse_require = require; const _M_ = avoid_parse_require("${module.export}");\n${exports}`
+  return `const avoid_parse_require = require; const _M_ = avoid_parse_require(${JSON.stringify(module.export)});\n${exports}`
 }
 
 async function getPreBundleSnippets(options: {
@@ -378,13 +374,9 @@ async function getPreBundleSnippets(options: {
   outdir: string
   buildOptions?: esbuild.BuildOptions
 }) {
-  const {
-    module,
-    outdir,
-    buildOptions = {},
-  } = options
+  const { module, outdir, buildOptions = {} } = options
 
-  const outfile = path.posix.join(outdir, module) + '.cjs'
+  const outfile = `${path.posix.join(outdir, module)}.cjs`
   await esbuild.build({
     entryPoints: [module],
     outfile,

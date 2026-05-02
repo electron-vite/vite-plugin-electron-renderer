@@ -42,9 +42,7 @@ npm i vite-plugin-electron-renderer -D
 import renderer from 'vite-plugin-electron-renderer'
 
 export default {
-  plugins: [
-    renderer(),
-  ],
+  plugins: [renderer()],
 }
 ```
 
@@ -69,7 +67,7 @@ export default {
 
 > By the way, if a module is marked as `type: 'cjs'`, the plugin just loads it in using `require()`. So it should be put into `dependencies`.
 
-## API *(Define)*
+## API _(Define)_
 
 `renderer(options: RendererOptions)`
 
@@ -77,19 +75,19 @@ export default {
 export interface RendererOptions {
   /**
    * Explicitly tell Vite how to load modules, which is very useful for C/C++ and `esm` modules
-   * 
+   *
    * - `type.cjs` just wraps esm-interop
    * - `type.esm` pre-bundle to `cjs` and wraps esm-interop
-   * 
+   *
    * @experimental
    */
   resolve?: {
     [module: string]: {
-      type: 'cjs' | 'esm',
+      type: 'cjs' | 'esm'
       /** Full custom how to pre-bundle */
       build?: (args: {
-        cjs: (module: string) => Promise<string>,
-        esm: (module: string, buildOptions?: import('esbuild').BuildOptions) => Promise<string>,
+        cjs: (module: string) => Promise<string>
+        esm: (module: string, buildOptions?: import('esbuild').BuildOptions) => Promise<string>
       }) => Promise<string>
     }
   }
@@ -152,15 +150,15 @@ const { ipcRenderer } = require('electron')
 
 ```js
 // 👉 https://github.com/electron-vite/vite-plugin-electron-renderer/blob/v0.13.0/src/optimizer.ts#L139-L142
-const _M_ = require("serialport");
+const _M_ = require('serialport')
 
-export default (_M_.default || _M_);
-export const SerialPort = _M_.SerialPort;
+export default _M_.default || _M_
+export const SerialPort = _M_.SerialPort
 // export other members ...
 ```
 
 <!--
-**By the way**. If an npm package is a pure ESM format package, and the packages it depends on are also in ESM format, then put it in `optimizeDeps.exclude` and it will work normally.  
+**By the way**. If an npm package is a pure ESM format package, and the packages it depends on are also in ESM format, then put it in `optimizeDeps.exclude` and it will work normally.
 [See the explanation](https://github.com/electron-vite/vite-plugin-electron-renderer/blob/v0.10.3/examples/quick-start/vite.config.ts#L33-L36)
 -->
 
