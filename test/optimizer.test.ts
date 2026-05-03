@@ -31,6 +31,11 @@ function excludeViteAlias(aliases: Alias[]) {
   return aliases.filter((a) => !a.find.toString().includes('@vite'))
 }
 
+function getRequireArg(snippets: string) {
+  const match = snippets.match(/avoid_parse_require\((["'])(.+?)\1\)/)
+  return match?.[2]
+}
+
 describe('optimizer', async () => {
   it('alias', async () => {
     const builtins_alias = excludeViteAlias((await getConfig('build')).resolve.alias)
@@ -119,6 +124,13 @@ describe('optimizer', async () => {
     expect(fs.existsSync(path.join(CACHE_DIR, 'serialport.mjs'))).toBe(true) // TODO: run
     expect(fs.existsSync(path.join(CACHE_DIR, 'node-fetch.cjs'))).toBe(true) // TODO: run
     expect(fs.existsSync(path.join(CACHE_DIR, 'node-fetch.mjs'))).toBe(true) // TODO: run
+    const nodeFetchWrapper = path.join(CACHE_DIR, 'node-fetch.mjs')
+    const nodeFetchRequireArg = getRequireArg(fs.readFileSync(nodeFetchWrapper, 'utf8'))
+    expect(nodeFetchRequireArg).toBeTruthy()
+    expect(nodeFetchRequireArg?.startsWith('.')).toBe(true)
+    expect(path.normalize(path.join(path.dirname(nodeFetchWrapper), nodeFetchRequireArg!))).toBe(
+      path.normalize(path.join(CACHE_DIR, 'node-fetch.cjs')),
+    )
 
     fs.rmSync(path.join(fixtures, 'dist'), { recursive: true, force: true })
   })
