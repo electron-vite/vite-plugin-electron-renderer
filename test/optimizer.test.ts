@@ -31,8 +31,8 @@ function excludeViteAlias(aliases: Alias[]) {
   return aliases.filter((a) => !a.find.toString().includes('@vite'))
 }
 
-function getRequireArg(snippets: string) {
-  const match = snippets.match(/avoid_parse_require\((["'])(.+?)\1\)/)
+function getRequireArg(snippet: string) {
+  const match = snippet.match(/avoid_parse_require\((["'])(.+?)\1\)/)
   return match?.[2]
 }
 
