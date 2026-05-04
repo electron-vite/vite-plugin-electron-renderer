@@ -1,6 +1,6 @@
 import { builtinModules } from 'node:module'
 
-import type { BuildOptions, UserConfig } from 'vite'
+import type { BuildOptions } from 'vite'
 import { resolveConfig } from 'vite'
 import { describe, expect, it } from 'vitest'
 
@@ -81,26 +81,4 @@ describe('config', () => {
     }
   })
 
-  it('commonjs', async () => {
-    const getConfig = (commonjsOptions: NonNullable<UserConfig['build']>['commonjsOptions']) =>
-      resolveConfig(
-        {
-          configFile: false,
-          build: {
-            commonjsOptions,
-          },
-          plugins: [renderer()],
-        },
-        'build',
-      )
-
-    const ignore_array = (await getConfig({ ignore: builtins })).build.commonjsOptions.ignore
-    expect(ignore_array).equal(builtins)
-
-    const ignore_function = (await getConfig({ ignore: (id) => builtins.includes(id) })).build
-      .commonjsOptions.ignore as (id: string) => boolean
-    for (const builtin of builtins) {
-      expect(ignore_function(builtin)).toBe(true)
-    }
-  })
 })

@@ -394,30 +394,6 @@ function adaptElectron(config: UserConfig) {
 
   config.build ??= {}
   config.build.rolldownOptions ??= {}
-
-  // Some third-party modules, such as `fs-extra`, it will extend the nativ fs module, maybe we need to stop it
-  // Avoid not being able to set - https://github.com/rollup/plugins/blob/commonjs-v24.0.0/packages/commonjs/src/helpers.js#L55-L60
-  withIgnore(config.build, electronBuiltins)
-}
-
-function withIgnore(configBuild: BuildOptions, modules: string[]) {
-  configBuild.commonjsOptions ??= {}
-  if (configBuild.commonjsOptions.ignore) {
-    if (typeof configBuild.commonjsOptions.ignore === 'function') {
-      const userIgnore = configBuild.commonjsOptions.ignore
-      configBuild.commonjsOptions.ignore = (id) => {
-        if (userIgnore?.(id) === true) {
-          return true
-        }
-        return modules.includes(id)
-      }
-    } else {
-      const ignore = configBuild.commonjsOptions.ignore as string[]
-      ignore.push(...modules)
-    }
-  } else {
-    configBuild.commonjsOptions.ignore = modules
-  }
 }
 
 function modifyOptimizeDeps(config: UserConfig, exclude: string[]) {
