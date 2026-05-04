@@ -1,5 +1,3 @@
-import { builtinModules } from 'node:module'
-
 import type { BuildOptions } from 'vite'
 import { resolveConfig } from 'vite'
 import { describe, expect, it } from 'vitest'

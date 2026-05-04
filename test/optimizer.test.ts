@@ -1,4 +1,5 @@
 import fs from 'node:fs'
+import { builtinModules } from 'node:module'
 import path from 'node:path'
 
 import type { Alias } from 'vite'
@@ -7,7 +8,6 @@ import { describe, expect, it } from 'vitest'
 
 import type { RendererOptions } from '../src/index'
 import { default as renderer, electron as electronSnippets } from '../src/index'
-import { builtinModules } from 'node:module'
 
 const fixtures = path.join(__dirname, 'fixtures')
 const CACHE_DIR = path.join(fixtures, 'node_modules/.vite-electron-renderer')
