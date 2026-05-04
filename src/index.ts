@@ -1,11 +1,12 @@
 import fs from 'node:fs'
-import { createRequire, builtinModules } from 'node:module'
+import { builtinModules } from 'node:module'
 import path from 'node:path'
 
 import type { Alias, BuildOptions, Logger, Plugin as VitePlugin, UserConfig } from 'vite'
 import { createBuilder, createLogger, normalizePath } from 'vite'
 
-const require = createRequire(import.meta.url)
+import { getSnippets } from './snippets'
+
 const builtins = builtinModules.filter((m) => !m.startsWith('_') && !m.startsWith('node:'))
 const nodeOnlyBuiltins = builtinModules.filter((m) => !m.startsWith('_') && m.startsWith('node:'))
 const electronBuiltins = [
@@ -17,79 +18,6 @@ const electronBuiltins = [
 const CACHE_DIR = '.vite-electron-renderer'
 const TAG = '[electron-renderer]'
 const logger: Logger = createLogger('info', { prefix: TAG })
-const IDENTIFIER_RE = /^[$A-Z_][0-9A-Z_$]*$/i
-const KEYWORDS = new Set([
-  'abstract',
-  'arguments',
-  'as',
-  'async',
-  'await',
-  'boolean',
-  'break',
-  'byte',
-  'case',
-  'catch',
-  'char',
-  'class',
-  'const',
-  'continue',
-  'debugger',
-  'default',
-  'delete',
-  'do',
-  'double',
-  'else',
-  'enum',
-  'eval',
-  'export',
-  'extends',
-  'false',
-  'final',
-  'finally',
-  'float',
-  'for',
-  'from',
-  'function',
-  'get',
-  'goto',
-  'if',
-  'implements',
-  'import',
-  'in',
-  'instanceof',
-  'int',
-  'interface',
-  'let',
-  'long',
-  'native',
-  'new',
-  'null',
-  'of',
-  'package',
-  'private',
-  'protected',
-  'public',
-  'return',
-  'set',
-  'short',
-  'static',
-  'super',
-  'switch',
-  'synchronized',
-  'this',
-  'throw',
-  'throws',
-  'transient',
-  'true',
-  'try',
-  'typeof',
-  'var',
-  'void',
-  'volatile',
-  'while',
-  'with',
-  'yield',
-])
 const electronMainApis: {
   name: string
   evns: ('Main' | 'Renderer' | 'Utility')[]
@@ -420,16 +348,6 @@ function modifyAlias(config: UserConfig, aliases: Alias[]) {
   ;(config.resolve.alias as Alias[]).push(...aliases)
 }
 
-function getSnippets(moduleId: string, requireArg = moduleId) {
-  // If a module is a CommonJs, use the `require()` load it can bring better performance,
-  // especially it is a C/C++ module, this can avoid a lot of trouble
-
-  // `avoid_parse_require` can be avoid Vite transforms parsing `require()`
-  return `const avoid_parse_require = require; const _M_ = avoid_parse_require(${JSON.stringify(requireArg)});\n${getExportSnippets(
-    Object.getOwnPropertyNames(/* not await import */ require(moduleId)),
-  )}`
-}
-
 async function getPreBundleSnippets(options: {
   module: string
   outDir: string
@@ -511,46 +429,6 @@ function getCacheFile(outDir: string, moduleId: string, extension: string) {
   }
 
   return { filename: normalizePath(filename), relativePath }
-}
-
-function getExportSnippets(members: string[]) {
-  const seen = new Set<string>()
-  const aliasedExports: string[] = []
-  const exportSnippets: string[] = []
-  let aliasIndex = 0
-
-  for (const member of [...members, 'default']) {
-    if (seen.has(member)) {
-      continue
-    }
-    seen.add(member)
-
-    const expression =
-      member === 'default' ? '_M_.default || _M_' : `_M_[${JSON.stringify(member)}]`
-    if (isSafeIdentifier(member)) {
-      exportSnippets.push(`export const ${member} = ${expression};`)
-      continue
-    }
-
-    const alias = getAliasName(member, aliasIndex++)
-    exportSnippets.push(`const ${alias} = ${expression};`)
-    aliasedExports.push(`${alias} as ${member}`)
-  }
-
-  if (aliasedExports.length) {
-    exportSnippets.push(`export {\n  ${aliasedExports.join(',\n  ')},\n};`)
-  }
-
-  return exportSnippets.join('\n')
-}
-
-function isSafeIdentifier(name: string) {
-  return name !== 'default' && IDENTIFIER_RE.test(name) && !KEYWORDS.has(name)
-}
-
-function getAliasName(name: string, index: number) {
-  const normalized = name.replace(/[^$\w]/g, '_').replace(/^\d/, '_$&')
-  return `__vite_plugin_electron_renderer_${normalized || 'export'}_${index}`
 }
 
 function mergePreBundleBuildOptions(
