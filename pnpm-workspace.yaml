@@ -7,7 +7,10 @@ catalog:
   electron: 40.9.1
 
 onlyBuiltDependencies:
+  - '@serialport/bindings-cpp'
   - electron
+  - electron-winstaller
+  - sqlite3
 
 overrides:
-  '@electron/get': 5.0.0
+  '@electron/get': ^5.0.0

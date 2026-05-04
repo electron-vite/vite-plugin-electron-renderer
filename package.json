@@ -34,13 +34,16 @@
   "scripts": {
     "dev": "tsdown --watch",
     "build": "tsdown",
-    "lint": "oxlint -c .oxlintrc.mjs",
-    "format": "oxfmt -c .oxfmtrc.mjs --check .",
+    "lint": "oxlint -c .oxlintrc.mjs --fix",
+    "format": "oxfmt -c .oxfmtrc.mjs",
+    "typecheck": "tsc --noEmit",
+    "qa": "pnpm lint && pnpm format && pnpm typecheck",
     "prepublishOnly": "pnpm build && pnpm test",
     "test": "vitest run"
   },
   "devDependencies": {
     "@subf/config": "^0.2.1",
+    "@subf/oxlint-plugin": "^0.2.2",
     "defu": "^6.1.7",
     "oxfmt": "^0.47.0",
     "oxlint": "^1.62.0",

@@ -6,8 +6,14 @@ import type { Alias, BuildOptions, Logger, Plugin as VitePlugin, UserConfig } fr
 import { createBuilder, createLogger, normalizePath } from 'vite'
 
 const require = createRequire(import.meta.url)
-const builtins = builtinModules.filter((m) => !m.startsWith('_'))
-const electronBuiltins = ['electron', ...builtins, ...builtins.map((module) => `node:${module}`)]
+const builtins = builtinModules.filter((m) => !m.startsWith('_') && !m.startsWith('node:'))
+const nodeOnlyBuiltins = builtinModules.filter((m) => !m.startsWith('_') && m.startsWith('node:'))
+const electronBuiltins = [
+  'electron',
+  ...builtins,
+  ...builtins.map((module) => `node:${module}`),
+  ...nodeOnlyBuiltins,
+]
 const CACHE_DIR = '.vite-electron-renderer'
 const TAG = '[electron-renderer]'
 const logger: Logger = createLogger('info', { prefix: TAG })
@@ -234,129 +240,152 @@ export default function renderer(options: RendererOptions = {}): VitePlugin {
   let cacheDir: string
   const resolveKeys: string[] = []
   const moduleCache = new Map<string, string>()
+  let builtinsReg: RegExp | null = null
+  let resolveReg: RegExp | null = null
+  const pendingResolve = new Map<string, NonNullable<RendererOptions['resolve']>[string]>()
 
   return {
     name: 'vite-plugin-electron-renderer',
-    config: {
-      async handler(config, { command }) {
-        resolveKeys.length = 0
-        moduleCache.clear()
+    enforce: 'pre',
+    async config(config, { command }) {
+      resolveKeys.length = 0
+      moduleCache.clear()
+      pendingResolve.clear()
+      builtinsReg = null
+      resolveReg = null
 
-        for (const [key, option] of Object.entries(options.resolve ?? {})) {
-          if (command === 'build' && option.type === 'esm') {
-            // A `esm` module can be build correctly during the `vite build`
-            // Because the current C/C++ modules are imported through `cjs` format, so exclude `esm`
-            continue // (🚧-① only `type:cjs`)
-          }
-          resolveKeys.push(key)
+      root = normalizePath(path.resolve(config.root ?? process.cwd()))
+      cacheDir = getCacheDir(config)
+
+      for (const [key, option] of Object.entries(options.resolve ?? {})) {
+        if (command === 'build' && option.type === 'esm') {
+          // A `esm` module can be build correctly during the `vite build`
+          // Because the current C/C++ modules are imported through `cjs` format, so exclude `esm`
+          continue // (🚧-① only `type:cjs`)
+        }
+        resolveKeys.push(key)
+      }
+
+      const aliases: Alias[] = []
+
+      // Pre-populate moduleCache for all electronBuiltins
+      for (const source of electronBuiltins) {
+        const content = source === 'electron' ? electron : getSnippets(source)
+        writeCacheModule(moduleCache, cacheDir, source, content)
+      }
+
+      // Single regex alias for all electron builtins
+      builtinsReg = new RegExp(`^(${electronBuiltins.map(escapeRegExp).join('|')})$`)
+      aliases.push({ find: builtinsReg, replacement: '$1' })
+
+      // options.resolve (🚧-① only `type:cjs`)
+      for (const source of resolveKeys) {
+        if (moduleCache.has(source)) {
+          continue
         }
 
-        // builtins
-        const aliases: Alias[] = [
-          {
-            find: new RegExp(`^(?:node:)?(${['electron', ...builtins].join('|')})$`),
-            // https://github.com/rollup/plugins/blob/alias-v5.0.0/packages/alias/src/index.ts#L90
-            replacement: '$1',
-            async customResolver(source) {
-              let id = moduleCache.get(source)
-              if (!id) {
-                id = getCacheFile(cacheDir, source, '.mjs').filename
+        const resolved = options.resolve?.[source]
+        if (!resolved) {
+          continue
+        }
 
-                if (!fs.existsSync(id)) {
-                  ensureDir(path.dirname(id))
-                  fs.writeFileSync(
-                    // lazy build
-                    id,
-                    source === 'electron' ? electron : getSnippets(source),
-                  )
-                }
+        if (resolved.type === 'cjs') {
+          // CJS is synchronous - eagerly generate snippets
+          const snippets = getSnippets(source)
+          logger.info(`pre-bundling ${source}`, { timestamp: true })
+          writeCacheModule(moduleCache, cacheDir, source, snippets)
+        } else {
+          // ESM and custom build - defer until actually resolved
+          pendingResolve.set(source, resolved)
+        }
+      }
 
-                moduleCache.set(source, id)
-              }
-              return { id }
-            },
-          },
-        ]
+      // Single regex alias for all resolve keys
+      if (resolveKeys.length > 0) {
+        resolveReg = new RegExp(`^(${resolveKeys.map(escapeRegExp).join('|')})$`)
+        aliases.push({ find: resolveReg, replacement: '$1' })
+      }
 
-        // options.resolve (🚧-① only `type:cjs`)
-        resolveKeys.length &&
-          aliases.push({
-            find: new RegExp(`^(${resolveKeys.join('|')})$`),
-            replacement: '$1',
-            async customResolver(source, importer, resolveOptions) {
-              let id = moduleCache.get(source)
-              if (!id) {
-                const filename = getCacheFile(cacheDir, source, '.mjs').filename
-                if (fs.existsSync(filename)) {
-                  id = filename
-                } else {
-                  const resolved = options.resolve?.[source]
-                  if (resolved) {
-                    let snippets: string | undefined
+      // Why is the builtin modules loaded by modifying `resolve.alias` instead of using the plugin `resolveId` + `load` hooks?
+      // `resolve.alias` has a very high priority in Vite! it works on Pre-Bundling, build, serve, ssr etc. anywhere
+      // secondly, `resolve.alias` can work in both the Renderer process and Web Worker, but not the plugin :(
+      // ① Alias priority - https://github.com/vitejs/vite/blob/v4.2.0/packages/vite/src/node/plugins/index.ts#L45
+      // ② Use in dep pre-bundling
+      // ③ Worker does not share plugins - https://github.com/vitejs/vite/blob/v4.2.0/packages/vite/src/node/config.ts#L253-L256
+      modifyAlias(config, aliases)
 
-                    if (typeof resolved.build === 'function') {
-                      snippets = await resolved.build({
-                        cjs: (module) => Promise.resolve(getSnippets(module)),
-                        esm: (module, buildOptions) =>
-                          getPreBundleSnippets({
-                            module,
-                            outDir: cacheDir,
-                            root,
-                            buildOptions,
-                          }),
-                      })
-                    } else if (resolved.type === 'cjs') {
-                      snippets = getSnippets(source)
-                    } else if (resolved.type === 'esm') {
-                      snippets = await getPreBundleSnippets({
-                        module: source,
-                        outDir: cacheDir,
-                        root,
-                      })
-                    }
+      modifyOptimizeDeps(config, resolveKeys)
 
-                    logger.info(`pre-bundling ${source}`, { timestamp: true })
-
-                    ensureDir(path.dirname(filename))
-                    fs.writeFileSync(filename, snippets ?? `/* ${TAG}: empty */`)
-                    id = filename
-                  } else {
-                    id = source
-                  }
-                }
-
-                moduleCache.set(source, id)
-              }
-
-              return id === source
-                ? // https://github.com/rollup/plugins/blob/alias-v5.0.0/packages/alias/src/index.ts#L96-L100
-                  this.resolve(
-                    source,
-                    importer,
-                    Object.assign({ skipSelf: true }, resolveOptions),
-                  ).then((resolved) => resolved || { id: source })
-                : { id }
-            },
-          })
-
-        // Why is the builtin modules loaded by modifying `resolve.alias` instead of using the plugin `resolveId` + `load` hooks?
-        // `resolve.alias` has a very high priority in Vite! it works on Pre-Bundling, build, serve, ssr etc. anywhere
-        // secondly, `resolve.alias` can work in both the Renderer process and Web Worker, but not the plugin :(
-        // ① Alias priority - https://github.com/vitejs/vite/blob/v4.2.0/packages/vite/src/node/plugins/index.ts#L45
-        // ② Use in dep pre-bundling
-        // ③ Worker does not share plugins - https://github.com/vitejs/vite/blob/v4.2.0/packages/vite/src/node/config.ts#L253-L256
-        modifyAlias(config, aliases)
-
-        modifyOptimizeDeps(config, resolveKeys)
-
-        adaptElectron(config)
-      },
+      adaptElectron(config)
     },
     configResolved(config) {
-      root = config.root
-      cacheDir = path.posix.join(path.posix.dirname(config.cacheDir), CACHE_DIR)
+      root = normalizePath(path.resolve(config.root))
+      cacheDir = getCacheDir(config)
+    },
+    async resolveId(source) {
+      // Handle builtins - already in moduleCache
+      if (builtinsReg?.test(source)) {
+        return moduleCache.get(source) ?? null
+      }
+      // Handle resolve keys - may need lazy pre-bundling for esm
+      if (resolveReg?.test(source)) {
+        if (pendingResolve.has(source)) {
+          const resolved = pendingResolve.get(source)!
+          pendingResolve.delete(source)
+          let snippets: string | undefined
+          if (typeof resolved.build === 'function') {
+            snippets = await resolved.build({
+              cjs: (module) => Promise.resolve(getSnippets(module)),
+              esm: (module, buildOptions) =>
+                getPreBundleSnippets({
+                  module,
+                  outDir: cacheDir,
+                  root,
+                  buildOptions,
+                }),
+            })
+          } else if (resolved.type === 'esm') {
+            snippets = await getPreBundleSnippets({
+              module: source,
+              outDir: cacheDir,
+              root,
+            })
+          }
+          logger.info(`pre-bundling ${source}`, { timestamp: true })
+          writeCacheModule(moduleCache, cacheDir, source, snippets ?? `/* ${TAG}: empty */`)
+        }
+        return moduleCache.get(source) ?? null
+      }
+      return null
     },
   }
+}
+
+function getCacheDir(config: Pick<UserConfig, 'cacheDir' | 'root'>) {
+  const cacheBase = config.cacheDir ?? path.join(config.root ?? process.cwd(), 'node_modules/.vite')
+  return normalizePath(path.resolve(path.dirname(cacheBase), CACHE_DIR))
+}
+
+function writeCacheModule(
+  moduleCache: Map<string, string>,
+  outDir: string,
+  source: string,
+  content: string,
+): string {
+  let id = moduleCache.get(source)
+  if (!id) {
+    id = getCacheFile(outDir, source, '.mjs').filename
+    if (!fs.existsSync(id)) {
+      ensureDir(path.dirname(id))
+      fs.writeFileSync(id, content)
+    }
+    moduleCache.set(source, id)
+  }
+  return id
+}
+
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 
 function adaptElectron(config: UserConfig) {
@@ -564,7 +593,7 @@ function mergeExternalOptions(external: NonNullable<BuildOptions['rolldownOption
     return electronBuiltins
   }
   if (typeof external === 'function') {
-    const userExternal = external as (...args: unknown[]) => unknown
+    const userExternal = external as (...args: unknown[]) => boolean | null
     return (...args: unknown[]) => {
       const source = args[0]
       return (
@@ -580,10 +609,12 @@ function mergeExternalOptions(external: NonNullable<BuildOptions['rolldownOption
 function mergeOutputOptions(output: NonNullable<BuildOptions['rolldownOptions']>['output']) {
   const defaults = {
     codeSplitting: false,
-    exports: 'named',
+    exports: 'named' as const,
   }
 
-  return Array.isArray(output)
-    ? output.map((item) => ({ ...defaults, ...item }))
-    : { ...defaults, ...output }
+  return (
+    Array.isArray(output)
+      ? output.map((item) => ({ ...defaults, ...item }))
+      : { ...defaults, ...output }
+  ) as NonNullable<BuildOptions['rolldownOptions']>['output']
 }

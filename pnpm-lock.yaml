@@ -11,7 +11,7 @@ catalogs:
       version: 40.9.1
 
 overrides:
-  '@electron/get': 5.0.0
+  '@electron/get': ^5.0.0
 
 importers:
 
@@ -20,6 +20,9 @@ importers:
       '@subf/config':
         specifier: ^0.2.1
         version: 0.2.1(defu@6.1.7)
+      '@subf/oxlint-plugin':
+        specifier: ^0.2.2
+        version: 0.2.2
       defu:
         specifier: ^6.1.7
         version: 6.1.7

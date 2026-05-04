@@ -9,7 +9,9 @@ import renderer from '..'
 export const builtins = [
   'electron',
   ...builtinModules.filter((m) => !m.startsWith('_')),
-  ...builtinModules.filter((m) => !m.startsWith('_')).map((mod) => `node:${mod}`),
+  ...builtinModules
+    .filter((m) => !m.startsWith('_') && !m.startsWith('node:'))
+    .map((mod) => `node:${mod}`),
 ]
 
 describe('config', () => {
@@ -69,10 +71,11 @@ describe('config', () => {
         'build',
       )
 
-    const output = (await getConfig({ exports: 'named' })).build.rolldownOptions.output
+    const output = (await getConfig({ exports: 'named' })).build.rolldownOptions.output as any
     expect(output.exports).toBe('named')
 
-    const outputArr = (await getConfig([{ exports: 'named' }])).build.rolldownOptions.output
+    const outputArr = (await getConfig([{ exports: 'named' }])).build.rolldownOptions
+      .output as any[]
     for (const out of outputArr) {
       expect(out.exports).toBe('named')
     }

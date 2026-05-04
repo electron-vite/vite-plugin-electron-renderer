@@ -6,7 +6,7 @@ import { build as viteBuild, resolveConfig } from 'vite'
 import { describe, expect, it } from 'vitest'
 
 import type { RendererOptions } from '..'
-import { default as renderer, electron as electronSnippets } from '..'
+import { default as renderer, electron as electronSnippets } from '../src/index'
 
 import { builtins } from './config.test'
 
@@ -42,7 +42,6 @@ describe('optimizer', async () => {
 
     expect(builtins_alias).length(1)
     expect(builtins_alias[0].replacement).equal('$1')
-    expect(builtins_alias[0].customResolver).toBeTypeOf('function')
     const builtinsReg = builtins_alias[0].find as RegExp
     for (const builtin of builtins) {
       expect(builtin).match(builtinsReg)
@@ -53,7 +52,6 @@ describe('optimizer', async () => {
     )
     expect(resolve_serve_alias).length(2) // builtins, resolve
     expect(resolve_serve_alias[1].replacement).equal('$1')
-    expect(resolve_serve_alias[1].customResolver).toBeTypeOf('function')
     const resolve_serve_reg = resolve_serve_alias[1].find as RegExp
     expect('serialport').match(resolve_serve_reg)
     expect('node-fetch').match(resolve_serve_reg)
@@ -63,7 +61,6 @@ describe('optimizer', async () => {
     )
     expect(resolve_build_alias).length(2) // builtins, resolve
     expect(resolve_build_alias[1].replacement).equal('$1')
-    expect(resolve_build_alias[1].customResolver).toBeTypeOf('function')
     const build_serve_reg = resolve_build_alias[1].find as RegExp
     expect(build_serve_reg.test('serialport')).toBe(true)
     // https://github.com/electron-vite/vite-plugin-electron-renderer/blob/v0.14.3/src/index.ts#L133-L137
@@ -89,7 +86,7 @@ describe('optimizer', async () => {
         // For force pre-bundling `esm` module
         // https://github.com/electron-vite/vite-plugin-electron-renderer/blob/v0.14.3/src/index.ts#L133-L137
         env.command = 'serve'
-        return plugin_renderer_config_handler.call(plugin_renderer, config, env)
+        return plugin_renderer_config_handler.call(plugin_renderer as any, config, env)
       },
     }
 
