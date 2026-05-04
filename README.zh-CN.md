@@ -36,8 +36,8 @@
 <!--
 ###### Electron-Renderer(vite build)
 
-1. 将 "fs module" 插入到 `rollupOptions.external`.
-2. 修改 `rollupOptions.output.format` 为 `cjs` *(如果你没有显式的设置它)*.
+1. 将 "fs module" 插入到 `rolldownOptions.external`.
+2. 修改 `rolldownOptions.output.format` 为 `cjs` *(如果你没有显式的设置它)*.
 
 ```js
 import { ipcRenderer } from 'electron'
