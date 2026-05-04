@@ -6,14 +6,6 @@ import { describe, expect, it } from 'vitest'
 
 import renderer from '../src/index'
 
-export const builtins = [
-  'electron',
-  ...builtinModules.filter((m) => !m.startsWith('_')),
-  ...builtinModules
-    .filter((m) => !m.startsWith('_') && !m.startsWith('node:'))
-    .map((mod) => `node:${mod}`),
-]
-
 describe('config', () => {
   /* it('rollup.external', async () => {
     const getConfig = (external: ExternalOption) => resolveConfig({

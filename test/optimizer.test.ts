@@ -7,8 +7,7 @@ import { describe, expect, it } from 'vitest'
 
 import type { RendererOptions } from '../src/index'
 import { default as renderer, electron as electronSnippets } from '../src/index'
-
-import { builtins } from './config.test'
+import { builtinModules } from 'node:module'
 
 const fixtures = path.join(__dirname, 'fixtures')
 const CACHE_DIR = path.join(fixtures, 'node_modules/.vite-electron-renderer')
@@ -16,6 +15,14 @@ const renderer_resolve: RendererOptions['resolve'] = {
   serialport: { type: 'cjs' },
   'node-fetch': { type: 'esm' },
 }
+
+const builtins = [
+  'electron',
+  ...builtinModules.filter((m) => !m.startsWith('_')),
+  ...builtinModules
+    .filter((m) => !m.startsWith('_') && !m.startsWith('node:'))
+    .map((mod) => `node:${mod}`),
+]
 
 function getConfig(command: 'build' | 'serve', options?: RendererOptions) {
   return resolveConfig(
