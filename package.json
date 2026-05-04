@@ -35,15 +35,17 @@
   "scripts": {
     "dev": "tsdown --watch",
     "build": "tsdown",
-    "lint": "oxlint -c .oxlintrc.mjs --fix",
-    "format": "oxfmt -c .oxfmtrc.mjs",
+    "lint": "oxlint --fix",
+    "format": "oxfmt",
     "typecheck": "tsc --noEmit",
     "qa": "pnpm lint && pnpm format && pnpm typecheck",
+    "test": "vitest run",
     "prepublishOnly": "pnpm build && pnpm test",
-    "test": "vitest run"
+    "release": "pnpm qa && pnpm prepublishOnly && bumpp --all"
   },
   "devDependencies": {
     "@subf/config": "^0.2.1",
+    "bumpp": "^11.0.1",
     "oxfmt": "^0.47.0",
     "oxlint": "^1.62.0",
     "tsdown": "^0.21.10",
