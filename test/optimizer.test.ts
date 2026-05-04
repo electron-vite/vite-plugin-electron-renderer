@@ -5,7 +5,7 @@ import type { Alias } from 'vite'
 import { build as viteBuild, resolveConfig } from 'vite'
 import { describe, expect, it } from 'vitest'
 
-import type { RendererOptions } from '..'
+import type { RendererOptions } from '../src/index'
 import { default as renderer, electron as electronSnippets } from '../src/index'
 
 import { builtins } from './config.test'

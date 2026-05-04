@@ -1,6 +1,6 @@
 import { createRequire } from 'node:module'
 
-const require = createRequire(import.meta.url)
+const req = createRequire(import.meta.url)
 
 const IDENTIFIER_RE = /^[$A-Z_][0-9A-Z_$]*$/i
 const KEYWORDS = new Set([
@@ -76,13 +76,13 @@ const KEYWORDS = new Set([
   'yield',
 ])
 
-export function getSnippets(moduleId: string, requireArg = moduleId) {
+export function getSnippets(moduleId: string, requireArg: string = moduleId): string {
   // If a module is a CommonJs, use the `require()` load it can bring better performance,
   // especially it is a C/C++ module, this can avoid a lot of trouble
 
   // `avoid_parse_require` can be avoid Vite transforms parsing `require()`
   return `const avoid_parse_require = require; const _M_ = avoid_parse_require(${JSON.stringify(requireArg)});\n${getExportSnippets(
-    Object.getOwnPropertyNames(/* not await import */ require(moduleId)),
+    Object.getOwnPropertyNames(/* not await import */ req(moduleId)),
   )}`
 }
 

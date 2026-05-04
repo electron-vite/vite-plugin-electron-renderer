@@ -4,7 +4,7 @@ import type { BuildOptions } from 'vite'
 import { resolveConfig } from 'vite'
 import { describe, expect, it } from 'vitest'
 
-import renderer from '..'
+import renderer from '../src/index'
 
 export const builtins = [
   'electron',
@@ -80,5 +80,4 @@ describe('config', () => {
       expect(out.exports).toBe('named')
     }
   })
-
 })
