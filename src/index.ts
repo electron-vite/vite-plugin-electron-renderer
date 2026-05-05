@@ -320,6 +320,12 @@ function adaptElectron(config: UserConfig) {
   // Make sure that Electron can be loaded into the local file using `loadFile()` after package
   config.base ??= './'
 
+  config.resolve ??= {}
+  config.resolve.conditions = [
+    'node',
+    ...(config.resolve.conditions ?? []).filter((condition) => condition !== 'node'),
+  ]
+
   config.build ??= {}
   config.build.rolldownOptions ??= {}
 }
@@ -327,12 +333,17 @@ function adaptElectron(config: UserConfig) {
 function modifyOptimizeDeps(config: UserConfig, exclude: string[]) {
   config.optimizeDeps ??= {}
   config.optimizeDeps.exclude ??= []
-  for (const str of exclude) {
-    if (!config.optimizeDeps.exclude.includes(str)) {
-      // Avoid Vite secondary pre-bundle
-      config.optimizeDeps.exclude.push(str)
-    }
-  }
+  config.optimizeDeps.exclude.push(
+    ...exclude,
+    'electron',
+    'electron/main',
+    'electron/renderer',
+    'electron/utility',
+    ...builtinModules,
+    ...builtinModules
+      .filter((m) => !m.startsWith('_') && !m.startsWith('node:'))
+      .map((m) => `node:${m}`),
+  )
 }
 
 function modifyAlias(config: UserConfig, aliases: Alias[]) {
