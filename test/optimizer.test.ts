@@ -2,7 +2,6 @@ import fs from 'node:fs'
 import { builtinModules } from 'node:module'
 import path from 'node:path'
 
-import type { Alias } from 'vite'
 import { build as viteBuild, resolveConfig } from 'vite'
 import { describe, expect, it } from 'vitest'
 
@@ -34,66 +33,72 @@ function getConfig(command: 'build' | 'serve', options?: RendererOptions) {
   )
 }
 
-function excludeViteAlias(aliases: Alias[]) {
-  return aliases.filter((a) => !a.find.toString().includes('@vite'))
-}
-
-function getRequireArg(snippet: string) {
-  const match = snippet.match(/avoid_parse_require\((["'])(.+?)\1\)/)
-  return match?.[2]
-}
-
 describe('optimizer', async () => {
-  it('alias', async () => {
-    const builtins_alias = excludeViteAlias((await getConfig('build')).resolve.alias)
-
-    expect(builtins_alias).length(1)
-    expect(builtins_alias[0].replacement).equal('$1')
-    const builtinsReg = builtins_alias[0].find as RegExp
+  it('optimizeDeps.exclude', async () => {
+    const buildExclude = (await getConfig('build')).optimizeDeps.exclude
     for (const builtin of builtins) {
-      expect(builtin).match(builtinsReg)
+      expect(buildExclude).toContain(builtin)
     }
 
-    const resolve_serve_alias = excludeViteAlias(
-      (await getConfig('serve', { resolve: renderer_resolve })).resolve.alias,
-    )
-    expect(resolve_serve_alias).length(2) // builtins, resolve
-    expect(resolve_serve_alias[1].replacement).equal('$1')
-    const resolve_serve_reg = resolve_serve_alias[1].find as RegExp
-    expect('serialport').match(resolve_serve_reg)
-    expect('node-fetch').match(resolve_serve_reg)
+    const resolveServeExclude = (await getConfig('serve', { resolve: renderer_resolve }))
+      .optimizeDeps.exclude
+    expect(resolveServeExclude).toContain('serialport')
+    expect(resolveServeExclude).toContain('node-fetch')
 
-    const resolve_build_alias = excludeViteAlias(
-      (await getConfig('build', { resolve: renderer_resolve })).resolve.alias,
+    const resolveBuildExclude = (await getConfig('build', { resolve: renderer_resolve }))
+      .optimizeDeps.exclude
+    expect(resolveBuildExclude).toContain('serialport')
+    expect(resolveBuildExclude).toContain('node-fetch')
+  })
+
+  it('writes cache modules lazily in resolveId', async () => {
+    fs.rmSync(CACHE_DIR, { recursive: true, force: true })
+
+    const pluginRenderer = renderer({ resolve: renderer_resolve })
+    await resolveConfig(
+      {
+        configFile: false,
+        root: fixtures,
+        plugins: [pluginRenderer],
+      },
+      'build',
     )
-    expect(resolve_build_alias).length(2) // builtins, resolve
-    expect(resolve_build_alias[1].replacement).equal('$1')
-    const build_serve_reg = resolve_build_alias[1].find as RegExp
-    expect(build_serve_reg.test('serialport')).toBe(true)
-    // https://github.com/electron-vite/vite-plugin-electron-renderer/blob/v0.14.3/src/index.ts#L133-L137
-    expect(build_serve_reg.test('node-fetch')).toBe(false)
+
+    expect(fs.existsSync(path.join(CACHE_DIR, 'electron.mjs'))).toBe(false)
+    expect(fs.existsSync(path.join(CACHE_DIR, 'serialport.mjs'))).toBe(false)
+    expect(fs.existsSync(path.join(CACHE_DIR, 'node-fetch.mjs'))).toBe(false)
+
+    if (typeof pluginRenderer.resolveId !== 'function') {
+      throw new TypeError('renderer plugin is missing a resolveId hook')
+    }
+
+    await pluginRenderer.resolveId.call(pluginRenderer as any, 'electron', undefined, {} as any)
+    await pluginRenderer.resolveId.call(pluginRenderer as any, 'serialport', undefined, {} as any)
+    await pluginRenderer.resolveId.call(pluginRenderer as any, 'node-fetch', undefined, {} as any)
+
+    expect(fs.existsSync(path.join(CACHE_DIR, 'electron.mjs'))).toBe(true)
+    expect(fs.existsSync(path.join(CACHE_DIR, 'serialport.mjs'))).toBe(true)
+    expect(fs.existsSync(path.join(CACHE_DIR, 'node-fetch.mjs'))).toBe(true)
   })
 
   it('pre-bundling', async () => {
     fs.rmSync(CACHE_DIR, { recursive: true, force: true })
 
-    const plugin_renderer = renderer({ resolve: renderer_resolve })
-    const plugin_renderer_config = plugin_renderer.config
-    if (!plugin_renderer_config) {
+    const pluginRenderer = renderer({ resolve: renderer_resolve })
+    const pluginRendererConfig = pluginRenderer.config
+    if (!pluginRendererConfig) {
       throw new TypeError('renderer plugin is missing a config hook')
     }
-    const plugin_renderer_config_handler =
-      typeof plugin_renderer_config === 'function'
-        ? plugin_renderer_config
-        : plugin_renderer_config.handler
+    const pluginRendererConfigHandler =
+      typeof pluginRendererConfig === 'function'
+        ? pluginRendererConfig
+        : pluginRendererConfig.handler
 
-    plugin_renderer.config = {
-      ...(typeof plugin_renderer_config === 'object' ? plugin_renderer_config : {}),
+    pluginRenderer.config = {
+      ...(typeof pluginRendererConfig === 'object' ? pluginRendererConfig : {}),
       handler(config, env) {
-        // For force pre-bundling `esm` module
-        // https://github.com/electron-vite/vite-plugin-electron-renderer/blob/v0.14.3/src/index.ts#L133-L137
         env.command = 'serve'
-        return plugin_renderer_config_handler.call(plugin_renderer as any, config, env)
+        return pluginRendererConfigHandler.call(pluginRenderer as any, config, env)
       },
     }
 
@@ -106,12 +111,12 @@ describe('optimizer', async () => {
           formats: ['es'],
         },
       },
-      plugins: [plugin_renderer],
+      plugins: [pluginRenderer],
     })
 
-    expect(fs.readFileSync(path.join(CACHE_DIR, 'electron.mjs'), 'utf8')).equal(electronSnippets)
-    expect(fs.existsSync(path.join(CACHE_DIR, 'fs.mjs'))).toBe(true) // TODO: run
-    expect(fs.existsSync(path.join(CACHE_DIR, 'path.mjs'))).toBe(true) // TODO: run
+    expect(fs.readFileSync(path.join(CACHE_DIR, 'electron.mjs'), 'utf8')).toBe(electronSnippets)
+    expect(fs.existsSync(path.join(CACHE_DIR, 'node:fs.mjs'))).toBe(true) // TODO: run
+    expect(fs.existsSync(path.join(CACHE_DIR, 'node:path.mjs'))).toBe(true) // TODO: run
 
     await viteBuild({
       configFile: false,
@@ -122,19 +127,15 @@ describe('optimizer', async () => {
           formats: ['es'],
         },
       },
-      plugins: [plugin_renderer],
+      plugins: [pluginRenderer],
     })
 
     expect(fs.existsSync(path.join(CACHE_DIR, 'serialport.mjs'))).toBe(true) // TODO: run
-    expect(fs.existsSync(path.join(CACHE_DIR, 'node-fetch.cjs'))).toBe(true) // TODO: run
     expect(fs.existsSync(path.join(CACHE_DIR, 'node-fetch.mjs'))).toBe(true) // TODO: run
     const nodeFetchWrapper = path.join(CACHE_DIR, 'node-fetch.mjs')
-    const nodeFetchRequireArg = getRequireArg(fs.readFileSync(nodeFetchWrapper, 'utf8'))
-    expect(nodeFetchRequireArg).toBeTruthy()
-    expect(nodeFetchRequireArg?.startsWith('.')).toBe(true)
-    expect(path.normalize(path.join(path.dirname(nodeFetchWrapper), nodeFetchRequireArg!))).toBe(
-      path.normalize(path.join(CACHE_DIR, 'node-fetch.cjs')),
-    )
+    const nodeFetchSnippet = fs.readFileSync(nodeFetchWrapper, 'utf8')
+    expect(nodeFetchSnippet).toContain('await import(/* @vite-ignore */ "node-fetch")')
+    expect(nodeFetchSnippet).toContain('export * from "node-fetch";')
 
     fs.rmSync(path.join(fixtures, 'dist'), { recursive: true, force: true })
   })

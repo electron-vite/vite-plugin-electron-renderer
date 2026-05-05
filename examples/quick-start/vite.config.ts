@@ -1,16 +1,19 @@
 import { defineConfig } from 'vite'
-import electron from 'vite-plugin-electron'
 import renderer from 'vite-plugin-electron-renderer'
+import electron from 'vite-plugin-electron/multi-env'
 
 export default defineConfig({
   plugins: [
     electron({
-      entry: 'electron/main.ts',
+      input: 'electron/main.ts',
     }),
     renderer({
       resolve: {
-        serialport: { type: 'cjs' },
-        got: { type: 'esm' },
+        sqlite3: { type: 'cjs' }, // C/C++ native addon
+        got: { type: 'esm' }, // pure-ESM package
+        serialport: { type: 'cjs' }, // C/C++ native addon
+        execa: { type: 'esm' }, // pure-ESM package
+        // 'unicron-magic': { type: 'esm' }, // pure-ESM package
       },
     }),
   ],

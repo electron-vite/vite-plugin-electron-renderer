@@ -43,7 +43,7 @@ describe('config', () => {
       'build',
     )
 
-    expect(config.base).equal('./')
+    expect(config.base).toBe('./')
   })
 
   it('rolldown.output', async () => {

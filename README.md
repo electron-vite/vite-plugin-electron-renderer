@@ -55,9 +55,9 @@ export default {
   plugins: [
     renderer({
       resolve: {
-        // C/C++ modules must be pre-bundle
+        // C/C++ modules should stay on require()
         serialport: { type: 'cjs' },
-        // `esm` modules only if Vite does not pre-bundle them correctly
+        // Pure ESM modules can be loaded through dynamic import()
         got: { type: 'esm' },
       },
     }),
@@ -76,21 +76,18 @@ export interface RendererOptions {
   /**
    * Explicitly tell Vite how to load modules, which is very useful for C/C++ and `esm` modules
    *
-   * - `type.cjs` just wraps esm-interop
-   * - `type.esm` pre-bundle to `cjs` and wraps esm-interop
+   * - `type.cjs` loads through `require()` and exposes statically known names when possible
+   * - `type.esm` loads through top-level `await import()`
    *
    * @experimental
    */
   resolve?: {
     [module: string]: {
       type: 'cjs' | 'esm'
-      /** Full custom how to pre-bundle */
+      /** Full custom how to generate the shim module */
       build?: (args: {
         cjs: (module: string) => Promise<string>
-        esm: (
-          module: string,
-          buildOptions?: import('vite').BuildOptions['rolldownOptions'],
-        ) => Promise<string>
+        esm: (module: string) => Promise<string>
       }) => Promise<string>
     }
   }
@@ -112,13 +109,13 @@ export interface RendererOptions {
  │ import { ipcRenderer } from 'electron' │                 │ Vite dev server │
  ┗————————————————————————————————————————┛                 ┗—————————————————┛
                  │                                                   │
-                 │ 1. Pre-Bundling electron module into              │
+                 │ 1. Generate electron shim on first resolve        │
                  │    node_modules/.vite-electron-renderer/electron  │
                  │                                                   │
                  │ 2. HTTP(Request): electron module                 │
                  │ ————————————————————————————————————————————————> │
                  │                                                   │
-                 │ 3. Alias redirects to                             │
+                 │ 3. resolveId() redirects to                       │
                  │    node_modules/.vite-electron-renderer/electron  │
                  │    ↓                                              │
                  │    const { ipcRenderer } = require('electron')    │
@@ -149,16 +146,17 @@ const { ipcRenderer } = require('electron')
 
 **In general**. Vite will pre-bundle all third-party modules in a Web-based usage format, but it can not adapt to Electron Renderer process especially C/C++ modules. So we must be make a little changes for this.
 
-<!-- When a module detected as a `cjs` module. it will be pre-bundle like the following. -->
+<!-- When a module is configured as `cjs`, it will be shimmed like the following. -->
 
 ```js
-// 👉 https://github.com/electron-vite/vite-plugin-electron-renderer/blob/v0.13.0/src/optimizer.ts#L139-L142
 const _M_ = require('serialport')
 
 export default _M_.default || _M_
 export const SerialPort = _M_.SerialPort
 // export other members ...
 ```
+
+Modules configured as `esm` are shimmed with top-level `await import()` and re-exported directly.
 
 <!--
 **By the way**. If an npm package is a pure ESM format package, and the packages it depends on are also in ESM format, then put it in `optimizeDeps.exclude` and it will work normally.
