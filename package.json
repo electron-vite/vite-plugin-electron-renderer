@@ -35,6 +35,10 @@
   "scripts": {
     "dev": "tsdown --watch",
     "build": "tsdown",
+    "example": "pnpm --dir examples/quick-start dev",
+    "example:build": "pnpm --dir examples/quick-start build",
+    "example:worker": "pnpm --dir examples/worker dev",
+    "example:worker:build": "pnpm --dir examples/worker build",
     "lint": "oxlint --fix",
     "format": "oxfmt",
     "typecheck": "tsc --noEmit",
@@ -49,8 +53,8 @@
     "oxfmt": "^0.47.0",
     "oxlint": "^1.62.0",
     "tsdown": "^0.21.10",
-    "typescript": "^6.0.3",
-    "vite": "^8.0.10",
+    "typescript": "catalog:",
+    "vite": "catalog:",
     "vitest": "^4.1.5"
   },
   "peerDependencies": {

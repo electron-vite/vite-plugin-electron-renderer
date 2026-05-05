@@ -11,8 +11,6 @@ export default defineConfig({
       // Multiple entry needed Vite >= 3.2.0
       entry: ['electron/main.ts', 'electron/worker.ts'],
     }),
-    renderer({
-      nodeIntegration: true,
-    }),
+    renderer(),
   ],
 })

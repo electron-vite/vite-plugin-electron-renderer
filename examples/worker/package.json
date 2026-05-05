@@ -11,15 +11,14 @@
   },
   "main": "dist-electron/main.js",
   "scripts": {
-    "dev": "vite dev",
-    "build": "tsc && vite build && electron-builder"
+    "dev": "vite",
+    "build": "vite build"
   },
   "devDependencies": {
     "electron": "catalog:",
-    "electron-builder": "^26.8.1",
-    "typescript": "^6.0.3",
-    "vite": "^8.0.10",
-    "vite-plugin-electron": "^0.29.1",
+    "typescript": "catalog:",
+    "vite": "catalog:",
+    "vite-plugin-electron": "catalog:",
     "vite-plugin-electron-renderer": "workspace:*"
   }
 }
