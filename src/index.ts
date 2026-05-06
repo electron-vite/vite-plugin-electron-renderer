@@ -57,7 +57,7 @@ export default function renderer(options: RendererOptions = {}): VitePlugin {
       resolveOptions.clear()
 
       for (const [key, option] of Object.entries(options.resolve ?? {})) {
-        if (option.type === 'cjs' || option.build) {
+        if (option.type === 'cjs' || option.type === 'esm' || option.build) {
           resolveOptions.set(key, option)
         }
       }
