@@ -173,12 +173,12 @@ export default function renderer(options: RendererOptions = {}): VitePlugin {
   return {
     name: PLUGIN_NAME,
     enforce: 'pre',
-    async config(config, { command }) {
+    async config(config) {
       moduleCache.clear()
       resolveOptions.clear()
 
       for (const [key, option] of Object.entries(options.resolve ?? {})) {
-        if (command === 'build' || command === 'serve') {
+        if (option.type === 'cjs' || option.build) {
           resolveOptions.set(key, option)
         }
       }
