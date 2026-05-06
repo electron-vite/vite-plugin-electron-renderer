@@ -6,7 +6,8 @@ import { build as viteBuild, resolveConfig } from 'vite'
 import { describe, expect, it } from 'vitest'
 
 import type { RendererOptions } from '../src/index'
-import { default as renderer, electron as electronSnippets } from '../src/index'
+import { default as renderer } from '../src/index'
+import { electronSnippet } from '../src/snippets'
 
 const fixtures = path.join(__dirname, 'fixtures')
 const CACHE_DIR = path.join(fixtures, 'node_modules/.vite-electron-renderer')
@@ -114,7 +115,7 @@ describe('optimizer', async () => {
       plugins: [pluginRenderer],
     })
 
-    expect(fs.readFileSync(path.join(CACHE_DIR, 'electron.mjs'), 'utf8')).toBe(electronSnippets)
+    expect(fs.readFileSync(path.join(CACHE_DIR, 'electron.mjs'), 'utf8')).toBe(electronSnippet)
     expect(fs.existsSync(path.join(CACHE_DIR, 'node:fs.mjs'))).toBe(true) // TODO: run
     expect(fs.existsSync(path.join(CACHE_DIR, 'node:path.mjs'))).toBe(true) // TODO: run
 
