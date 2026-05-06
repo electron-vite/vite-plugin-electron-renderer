@@ -14,7 +14,6 @@ catalog:
 onlyBuiltDependencies:
   - '@serialport/bindings-cpp'
   - electron
-  - electron-winstaller
   - sqlite3
 
 overrides:

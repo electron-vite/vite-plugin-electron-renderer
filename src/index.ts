@@ -253,7 +253,7 @@ function writeCacheModule(
 
 function getCacheFile(outDir: string, moduleId: string, extension: string) {
   const root = path.resolve(outDir)
-  const filename = path.resolve(root, `${moduleId}${extension}`)
+  const filename = path.resolve(root, `${moduleId.replaceAll('/', '_')}${extension}`)
   const relativePath = normalizePath(path.relative(root, filename))
 
   if (relativePath === '' || relativePath.startsWith('..') || path.isAbsolute(relativePath)) {

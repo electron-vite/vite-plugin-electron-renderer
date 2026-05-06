@@ -134,7 +134,7 @@ describe('optimizer', async () => {
     expect(fs.existsSync(path.join(CACHE_DIR, 'node-fetch.mjs'))).toBe(true) // TODO: run
     const nodeFetchWrapper = path.join(CACHE_DIR, 'node-fetch.mjs')
     const nodeFetchSnippet = fs.readFileSync(nodeFetchWrapper, 'utf8')
-    expect(nodeFetchSnippet).toContain('await import(/* @vite-ignore */ "node-fetch")')
+    expect(nodeFetchSnippet).toContain('await import("node-fetch")')
     expect(nodeFetchSnippet).toContain('export * from "node-fetch";')
 
     fs.rmSync(path.join(fixtures, 'dist'), { recursive: true, force: true })
