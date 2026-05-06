@@ -12,6 +12,7 @@ import { electronSnippet } from '../src/snippets'
 const fixtures = path.join(__dirname, 'fixtures')
 const CACHE_DIR = path.join(fixtures, 'node_modules/.vite-electron-renderer')
 const renderer_resolve: RendererOptions['resolve'] = {
+  execa: { type: 'esm' },
   serialport: { type: 'cjs' },
   'node-fetch': { type: 'esm' },
 }
@@ -43,11 +44,13 @@ describe('optimizer', async () => {
 
     const resolveServeExclude = (await getConfig('serve', { resolve: renderer_resolve }))
       .optimizeDeps.exclude
+    expect(resolveServeExclude).toContain('execa')
     expect(resolveServeExclude).toContain('serialport')
     expect(resolveServeExclude).toContain('node-fetch')
 
     const resolveBuildExclude = (await getConfig('build', { resolve: renderer_resolve }))
       .optimizeDeps.exclude
+    expect(resolveBuildExclude).toContain('execa')
     expect(resolveBuildExclude).toContain('serialport')
     expect(resolveBuildExclude).toContain('node-fetch')
   })
@@ -66,6 +69,7 @@ describe('optimizer', async () => {
     )
 
     expect(fs.existsSync(path.join(CACHE_DIR, 'electron.mjs'))).toBe(false)
+    expect(fs.existsSync(path.join(CACHE_DIR, 'execa.mjs'))).toBe(false)
     expect(fs.existsSync(path.join(CACHE_DIR, 'serialport.mjs'))).toBe(false)
     expect(fs.existsSync(path.join(CACHE_DIR, 'node-fetch.mjs'))).toBe(false)
 
@@ -74,10 +78,12 @@ describe('optimizer', async () => {
     }
 
     await pluginRenderer.resolveId.call(pluginRenderer as any, 'electron', undefined, {} as any)
+    await pluginRenderer.resolveId.call(pluginRenderer as any, 'execa', undefined, {} as any)
     await pluginRenderer.resolveId.call(pluginRenderer as any, 'serialport', undefined, {} as any)
     await pluginRenderer.resolveId.call(pluginRenderer as any, 'node-fetch', undefined, {} as any)
 
     expect(fs.existsSync(path.join(CACHE_DIR, 'electron.mjs'))).toBe(true)
+    expect(fs.existsSync(path.join(CACHE_DIR, 'execa.mjs'))).toBe(true)
     expect(fs.existsSync(path.join(CACHE_DIR, 'serialport.mjs'))).toBe(true)
     expect(fs.existsSync(path.join(CACHE_DIR, 'node-fetch.mjs'))).toBe(true)
   })
@@ -131,12 +137,16 @@ describe('optimizer', async () => {
       plugins: [pluginRenderer],
     })
 
+    expect(fs.existsSync(path.join(CACHE_DIR, 'execa.mjs'))).toBe(true)
     expect(fs.existsSync(path.join(CACHE_DIR, 'serialport.mjs'))).toBe(true) // TODO: run
     expect(fs.existsSync(path.join(CACHE_DIR, 'node-fetch.mjs'))).toBe(true) // TODO: run
+    const execaBundle = fs.readFileSync(path.join(CACHE_DIR, 'execa.mjs'), 'utf8')
+    expect(execaBundle).toContain('from "node:child_process"')
+    expect(execaBundle).not.toContain('from "execa"')
     const nodeFetchWrapper = path.join(CACHE_DIR, 'node-fetch.mjs')
-    const nodeFetchSnippet = fs.readFileSync(nodeFetchWrapper, 'utf8')
-    expect(nodeFetchSnippet).toContain('await import("node-fetch")')
-    expect(nodeFetchSnippet).toContain('export * from "node-fetch";')
+    const nodeFetchBundle = fs.readFileSync(nodeFetchWrapper, 'utf8')
+    expect(nodeFetchBundle).toContain('from "node:http"')
+    expect(nodeFetchBundle).not.toContain('from "node-fetch"')
 
     fs.rmSync(path.join(fixtures, 'dist'), { recursive: true, force: true })
   })

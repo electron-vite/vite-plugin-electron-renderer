@@ -14,15 +14,21 @@ export function cjsSnippet(moduleId: string): string {
   }
 }
 
+export function cjsEntry(moduleId: string): string {
+  try {
+    const required = req(moduleId)
+    return cjsEntryStatic(moduleId, Object.getOwnPropertyNames(required ?? {}))
+  } catch {
+    return cjsEntryFallback(moduleId)
+  }
+}
+
 /**
  * CJS shim with statically known export names.
  * Preferred because Rolldown can tree-shake static exports.
  */
 function cjsShimStatic(pkg: string, exportKeys: string[]): string {
-  const named = [...new Set(exportKeys)]
-    .filter((key) => key !== 'default' && key !== '__esModule' && IDENTIFIER_RE.test(key))
-    .map((key) => `export const ${key} = _m_[${JSON.stringify(key)}];`)
-    .join('\n')
+  const named = getNamedExports(exportKeys)
 
   return `// [${PLUGIN_NAME}] CJS shim - ${JSON.stringify(pkg)}
 // Loaded via require() inside Electron's Node.js runtime.
@@ -42,6 +48,21 @@ export default (_m_?.default ?? _m_);
 `
 }
 
+function cjsEntryStatic(pkg: string, exportKeys: string[]): string {
+  const named = getNamedExports(exportKeys)
+
+  return `import _m_ from ${JSON.stringify(pkg)};
+export default (_m_?.default ?? _m_);
+${named}
+`
+}
+
+function cjsEntryFallback(pkg: string): string {
+  return `import _m_ from ${JSON.stringify(pkg)};
+export default (_m_?.default ?? _m_);
+`
+}
+
 /**
  * ESM shim for pure-ESM packages.
  */
@@ -52,6 +73,21 @@ const _m_ = await import(${JSON.stringify(pkg)});
 export default (_m_?.default ?? _m_);
 export * from ${JSON.stringify(pkg)};
 `
+}
+
+export function esmEntry(pkg: string): string {
+  return `import * as _m_ from ${JSON.stringify(pkg)};
+const _default = Reflect.get(_m_, 'default') ?? _m_;
+export default _default;
+export * from ${JSON.stringify(pkg)};
+`
+}
+
+function getNamedExports(exportKeys: string[]): string {
+  return [...new Set(exportKeys)]
+    .filter((key) => key !== 'default' && key !== '__esModule' && IDENTIFIER_RE.test(key))
+    .map((key) => `export const ${key} = _m_[${JSON.stringify(key)}];`)
+    .join('\n')
 }
 
 const electronMainApis: {
