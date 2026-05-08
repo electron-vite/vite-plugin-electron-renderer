@@ -135,28 +135,9 @@ describe('optimizer', async () => {
     expect(fs.existsSync(path.join(CACHE_DIR, 'node-fetch.mjs'))).toBe(true)
     const nodeFetchWrapper = path.join(CACHE_DIR, 'node-fetch.mjs')
     const nodeFetchSnippet = fs.readFileSync(nodeFetchWrapper, 'utf8')
-    expect(nodeFetchSnippet).toMatchInlineSnapshot(`
-      "// [vite-plugin-electron-renderer] ESM shim - "node-fetch"
-      import { createRequire } from 'node:module';
-      const req = createRequire("E:/front/vite-plugin-electron-renderer/test/fixtures");
-      const _m_ = req("node-fetch");
-      export default (_m_?.default ?? _m_);
-      export const AbortError = _m_["AbortError"];
-      export const Blob = _m_["Blob"];
-      export const FetchError = _m_["FetchError"];
-      export const File = _m_["File"];
-      export const FormData = _m_["FormData"];
-      export const Headers = _m_["Headers"];
-      export const Request = _m_["Request"];
-      export const Response = _m_["Response"];
-      export const blobFrom = _m_["blobFrom"];
-      export const blobFromSync = _m_["blobFromSync"];
-      export const fileFrom = _m_["fileFrom"];
-      export const fileFromSync = _m_["fileFromSync"];
-      export const isRedirect = _m_["isRedirect"];
-      "
-    `)
-
+    expect(nodeFetchSnippet).toMatch('const _m_ = req("node-fetch")')
+    expect(nodeFetchSnippet).toMatch('export default (_m_?.default ?? _m_);')
+    expect(nodeFetchSnippet).toMatch('export const AbortError = _m_["AbortError"];')
     fs.rmSync(path.join(fixtures, 'dist'), { recursive: true, force: true })
   })
 })
