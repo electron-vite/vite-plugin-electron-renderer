@@ -39,18 +39,25 @@ function cjsShimFallback(pkg: string): string {
   return `// [${PLUGIN_NAME}] CJS shim (dynamic) - ${JSON.stringify(pkg)}
 const _m_ = require(${JSON.stringify(pkg)});
 export default (_m_?.default ?? _m_);
+export * from ${JSON.stringify(pkg)};
 `
 }
 
 /**
  * ESM shim for pure-ESM packages.
  */
-export function esmSnippet(pkg: string): string {
-  return `// [${PLUGIN_NAME}] ESM shim - ${JSON.stringify(pkg)}
-// Dynamic import() defers to Electron's ES module loader.
-const _m_ = await import(${JSON.stringify(pkg)});
+export function esmSnippet(moduleId: string, root: string): string {
+  const required = req(moduleId)
+  const named = Object.getOwnPropertyNames(required ?? {})
+    .filter((key) => key !== 'default' && key !== '__esModule' && IDENTIFIER_RE.test(key))
+    .map((key) => `export const ${key} = _m_[${JSON.stringify(key)}];`)
+    .join('\n')
+  return `// [${PLUGIN_NAME}] ESM shim - ${JSON.stringify(moduleId)}
+import { createRequire } from 'node:module';
+const req = createRequire(${JSON.stringify(root)});
+const _m_ = req(${JSON.stringify(moduleId)});
 export default (_m_?.default ?? _m_);
-export * from ${JSON.stringify(pkg)};
+${named}
 `
 }
 

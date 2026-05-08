@@ -116,8 +116,8 @@ describe('optimizer', async () => {
     })
 
     expect(fs.readFileSync(path.join(CACHE_DIR, 'electron.mjs'), 'utf8')).toBe(electronSnippet)
-    expect(fs.existsSync(path.join(CACHE_DIR, 'node:fs.mjs'))).toBe(true) // TODO: run
-    expect(fs.existsSync(path.join(CACHE_DIR, 'node:path.mjs'))).toBe(true) // TODO: run
+    expect(fs.existsSync(path.join(CACHE_DIR, 'node:fs.mjs'))).toBe(true)
+    expect(fs.existsSync(path.join(CACHE_DIR, 'node:path.mjs'))).toBe(true)
 
     await viteBuild({
       configFile: false,
@@ -131,12 +131,31 @@ describe('optimizer', async () => {
       plugins: [pluginRenderer],
     })
 
-    expect(fs.existsSync(path.join(CACHE_DIR, 'serialport.mjs'))).toBe(true) // TODO: run
-    expect(fs.existsSync(path.join(CACHE_DIR, 'node-fetch.mjs'))).toBe(true) // TODO: run
+    expect(fs.existsSync(path.join(CACHE_DIR, 'serialport.mjs'))).toBe(true)
+    expect(fs.existsSync(path.join(CACHE_DIR, 'node-fetch.mjs'))).toBe(true)
     const nodeFetchWrapper = path.join(CACHE_DIR, 'node-fetch.mjs')
     const nodeFetchSnippet = fs.readFileSync(nodeFetchWrapper, 'utf8')
-    expect(nodeFetchSnippet).toContain('await import("node-fetch")')
-    expect(nodeFetchSnippet).toContain('export * from "node-fetch";')
+    expect(nodeFetchSnippet).toMatchInlineSnapshot(`
+      "// [vite-plugin-electron-renderer] ESM shim - "node-fetch"
+      import { createRequire } from 'node:module';
+      const req = createRequire("E:/front/vite-plugin-electron-renderer/test/fixtures");
+      const _m_ = req("node-fetch");
+      export default (_m_?.default ?? _m_);
+      export const AbortError = _m_["AbortError"];
+      export const Blob = _m_["Blob"];
+      export const FetchError = _m_["FetchError"];
+      export const File = _m_["File"];
+      export const FormData = _m_["FormData"];
+      export const Headers = _m_["Headers"];
+      export const Request = _m_["Request"];
+      export const Response = _m_["Response"];
+      export const blobFrom = _m_["blobFrom"];
+      export const blobFromSync = _m_["blobFromSync"];
+      export const fileFrom = _m_["fileFrom"];
+      export const fileFromSync = _m_["fileFromSync"];
+      export const isRedirect = _m_["isRedirect"];
+      "
+    `)
 
     fs.rmSync(path.join(fixtures, 'dist'), { recursive: true, force: true })
   })

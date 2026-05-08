@@ -1,11 +1,11 @@
 import { defineConfig } from 'vite'
+import electron from 'vite-plugin-electron'
 import renderer from 'vite-plugin-electron-renderer'
-import electron from 'vite-plugin-electron/multi-env'
 
 export default defineConfig({
   plugins: [
     electron({
-      input: 'electron/main.ts',
+      entry: 'electron/main.ts',
     }),
     renderer({
       resolve: {

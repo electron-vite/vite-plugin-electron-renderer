@@ -2,7 +2,7 @@ import fs from 'node:fs'
 import { builtinModules } from 'node:module'
 import path from 'node:path'
 
-import type { Logger, Plugin as VitePlugin } from 'vite'
+import type { Logger, Plugin as VitePlugin, UserConfig } from 'vite'
 import { createLogger, normalizePath } from 'vite'
 
 import { esmSnippet, cjsSnippet, PLUGIN_NAME, electronSnippet } from './snippets'
@@ -19,7 +19,7 @@ const DEFAULT_EXCLUDE = new Set([
     .map((module) => `node:${module}`),
 ])
 
-const CACHE_DIR = '.vite-electron-renderer'
+const CACHE_DIR = '/.vite-electron-renderer'
 const TAG = '[electron-renderer]'
 const logger: Logger = createLogger('info', { prefix: TAG })
 
@@ -46,36 +46,34 @@ export interface RendererOptions {
 
 export default function renderer(options: RendererOptions = {}): VitePlugin {
   let cacheDir: string
+  let root: string
   const moduleCache = new Map<string, string>()
+
   const resolveOptions = new Map<string, NonNullable<RendererOptions['resolve']>[string]>()
+  for (const [key, option] of Object.entries(options.resolve ?? {})) {
+    resolveOptions.set(key, option)
+  }
+  const optimizeDeps: UserConfig['optimizeDeps'] = {
+    exclude: [...resolveOptions.keys(), ...DEFAULT_EXCLUDE],
+  }
 
   return {
     name: PLUGIN_NAME,
     enforce: 'pre',
     async config(config) {
       moduleCache.clear()
-      resolveOptions.clear()
-
-      for (const [key, option] of Object.entries(options.resolve ?? {})) {
-        if (option.type === 'cjs' || option.build) {
-          resolveOptions.set(key, option)
-        }
-      }
-
-      const resolveKeys = [...resolveOptions.keys()]
 
       return {
         base: config.base ?? './',
         resolve: {
           conditions: ['node'],
         },
-        optimizeDeps: {
-          exclude: [...resolveKeys, ...DEFAULT_EXCLUDE],
-        },
+        optimizeDeps,
       }
     },
     configResolved(config) {
-      cacheDir = normalizePath(path.resolve(path.dirname(config.cacheDir), CACHE_DIR))
+      cacheDir = path.dirname(config.cacheDir) + CACHE_DIR
+      root = config.root
     },
     async resolveId(source) {
       if (!DEFAULT_EXCLUDE.has(source) && !resolveOptions.has(source)) {
@@ -93,18 +91,18 @@ export default function renderer(options: RendererOptions = {}): VitePlugin {
       if (source === 'electron') {
         snippets = electronSnippet
       } else if (typeof resolved?.build === 'function') {
-        logger.info(`pre-bundling ${source}`, { timestamp: true })
+        logger.info(`Custom build for ${source}`, { timestamp: true })
         snippets =
           (await resolved.build({
             cjs: async (module) => cjsSnippet(module),
-            esm: async (module) => esmSnippet(module),
+            esm: async (module) => esmSnippet(module, root),
           })) ?? `/* ${TAG}: empty */`
       } else if (resolved?.type === 'esm') {
-        logger.info(`pre-bundling ${source}`, { timestamp: true })
-        snippets = esmSnippet(source)
+        logger.info(`Wrap for ESM dep: ${source}`, { timestamp: true })
+        snippets = esmSnippet(source, root)
       } else {
         if (resolved) {
-          logger.info(`pre-bundling ${source}`, { timestamp: true })
+          logger.info(`Wrap for CJS dep: ${source}`, { timestamp: true })
         }
         snippets = cjsSnippet(source)
       }
