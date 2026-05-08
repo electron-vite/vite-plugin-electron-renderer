@@ -1,6 +1,15 @@
 # vite-plugin-electron-renderer
 
-简而言之，`vite-plugin-electron-renderer` 职责是填充 Electron, Node.js 内置模块。
+> [!warning]
+> 在 Electron 中不推荐使用 `nodeIntegration`，而且这个插件并不能解决它可能带来的安全问题。如果你要使用这个插件，请先明确启用 `nodeIntegration` 的安全影响，并采取相应的缓解措施。
+
+简而言之，`vite-plugin-electron-renderer` 职责是为渲染进程填充 Electron、Node.js 内置模块以及其他 npm 包。
+
+> [!important]
+>
+> 这个包目前处于 v1 beta 开发阶段。使用需自担风险。
+>
+> 这个插件与 Vite Environment API 不兼容，因此和新的 `vite-plugin-electron/multi-env` 一起运行时可能会出问题。请改用 `vite-plugin-electron`。
 
 [English](https://github.com/electron-vite/vite-plugin-electron-renderer#readme) | 简体中文
 

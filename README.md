@@ -26,7 +26,16 @@
 
 <br/>
 
-In short, `vite-plugin-electron-renderer` is responsible for polyfilling Electron, Node.js built-in modules.
+> [!warning]
+> `nodeIntegration` is not recommended in Electron, and this plugin is not a solution to the security issues it may cause. If you want to use this plugin, please make sure you understand the security implications of enabling `nodeIntegration` and take appropriate measures to mitigate potential risks.
+
+In short, `vite-plugin-electron-renderer` is responsible for polyfilling Electron, Node.js built-in modules and other npm packages for the Renderer process.
+
+> [!important]
+>
+> This plugin is currently in v1 beta development. Use it at your own risk.
+>
+> This plugin does not compatibile to Vite Environment API, so run with the new `vite-plugin-electron/multi-env` maybe broken. Please use `vite-plugin-electron` instead.
 
 ## Install
 
