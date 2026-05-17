@@ -27,7 +27,7 @@ export default function cjsShim(): Plugin {
     configResolved(_config) {
       config = _config
 
-      const output = config.build.rolldownOptions.output
+      const output = config.build.rolldownOptions.output || config.build.rollupOptions.output
       if (output) {
         // https://github.com/electron-vite/vite-plugin-electron/issues/6
         // https://github.com/electron-vite/vite-plugin-electron/commit/e6decf42164bc1e3801e27984322c41b9c2724b7#r75138942

@@ -7,6 +7,8 @@ process.env['ELECTRON_DISABLE_SECURITY_WARNINGS'] = 'true'
 
 let win: BrowserWindow
 
+console.log(typeof app)
+
 app.whenReady().then(() => {
   win = new BrowserWindow({
     webPreferences: {
@@ -26,4 +28,8 @@ app.whenReady().then(() => {
   worker.on('message', (value) => {
     console.log('[worker message]:', value)
   })
+})
+
+app.on('window-all-closed', () => {
+  app.quit()
 })

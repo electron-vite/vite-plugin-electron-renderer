@@ -13,7 +13,6 @@ export default defineConfig({
         got: { type: 'esm' }, // pure-ESM package
         serialport: { type: 'cjs' }, // C/C++ native addon
         execa: { type: 'esm' }, // pure-ESM package
-        // 'unicron-magic': { type: 'esm' }, // pure-ESM package
       },
     }),
   ],

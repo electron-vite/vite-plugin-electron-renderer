@@ -23,3 +23,7 @@ app.whenReady().then(() => {
     win.loadFile(path.join(__dirname, '../dist/index.html'))
   }
 })
+
+app.on('window-all-closed', () => {
+  app.quit()
+})
