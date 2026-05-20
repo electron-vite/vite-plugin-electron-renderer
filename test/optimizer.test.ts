@@ -52,7 +52,7 @@ describe('optimizer', async () => {
     expect(resolveBuildExclude).toContain('node-fetch')
   })
 
-  it('writes cache modules lazily in resolveId', async () => {
+  it('writes cache modules lazily on resolve', async () => {
     fs.rmSync(CACHE_DIR, { recursive: true, force: true })
 
     const pluginRenderer = renderer({ resolve: renderer_resolve })
@@ -115,6 +115,9 @@ describe('optimizer', async () => {
       plugins: [pluginRenderer],
     })
 
+    // On Vite 8 the resolveId hook receives the original specifier (`node:fs`),
+    // which encodes to `node+fs.mjs`. The legacy Vite < 8 alias path would
+    // strip `node:` first and produce `fs.mjs`.
     expect(fs.readFileSync(path.join(CACHE_DIR, 'electron.mjs'), 'utf8')).toBe(electronSnippet)
     expect(fs.existsSync(path.join(CACHE_DIR, 'node+fs.mjs'))).toBe(true)
     expect(fs.existsSync(path.join(CACHE_DIR, 'node+path.mjs'))).toBe(true)

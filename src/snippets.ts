@@ -24,9 +24,12 @@ function cjsShimStatic(pkg: string, exportKeys: string[]): string {
     .map((key) => `export const ${key} = _m_[${JSON.stringify(key)}];`)
     .join('\n')
 
+  // `const _r_ = require` aliases the runtime `require` so static analyzers
+  // (esbuild, @rollup/plugin-commonjs) in vite < 8 don't rewrite this call.
   return `// [${PLUGIN_NAME}] CJS shim - ${JSON.stringify(pkg)}
 // Loaded via require() inside Electron's Node.js runtime.
-const _m_ = require(${JSON.stringify(pkg)});
+const _r_ = require;
+const _m_ = _r_(${JSON.stringify(pkg)});
 export default (_m_?.default ?? _m_);
 ${named}
 `
@@ -37,7 +40,8 @@ ${named}
  */
 function cjsShimFallback(pkg: string): string {
   return `// [${PLUGIN_NAME}] CJS shim (dynamic) - ${JSON.stringify(pkg)}
-const _m_ = require(${JSON.stringify(pkg)});
+const _r_ = require;
+const _m_ = _r_(${JSON.stringify(pkg)});
 export default (_m_?.default ?? _m_);
 export * from ${JSON.stringify(pkg)};
 `
