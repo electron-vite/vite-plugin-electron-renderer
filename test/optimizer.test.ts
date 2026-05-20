@@ -116,8 +116,8 @@ describe('optimizer', async () => {
     })
 
     expect(fs.readFileSync(path.join(CACHE_DIR, 'electron.mjs'), 'utf8')).toBe(electronSnippet)
-    expect(fs.existsSync(path.join(CACHE_DIR, 'node:fs.mjs'))).toBe(true)
-    expect(fs.existsSync(path.join(CACHE_DIR, 'node:path.mjs'))).toBe(true)
+    expect(fs.existsSync(path.join(CACHE_DIR, 'node+fs.mjs'))).toBe(true)
+    expect(fs.existsSync(path.join(CACHE_DIR, 'node+path.mjs'))).toBe(true)
 
     await viteBuild({
       configFile: false,

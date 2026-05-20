@@ -130,7 +130,11 @@ function writeCacheModule(
 
 function getCacheFile(outDir: string, moduleId: string, extension: string) {
   const root = path.resolve(outDir)
-  const filename = path.resolve(root, `${moduleId.replaceAll('/', '_')}${extension}`)
+  // Use `+` as the path separator: it's invalid in npm package names and
+  // built-in module IDs, so it can't collide with a literal `_`/`-` in a name.
+  // Also drop `:` (invalid on Windows) so `node:fs` becomes `node+fs`.
+  const safe = moduleId.replaceAll('/', '+').replaceAll(':', '+')
+  const filename = path.resolve(root, `${safe}${extension}`)
   const relativePath = normalizePath(path.relative(root, filename))
 
   if (relativePath === '' || relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
