@@ -20,6 +20,11 @@ export default function cjsShim(): Plugin {
         // This ensures that static resources are loaded correctly, such as images, `worker.js`
         // BWT, the `.js` file can be loaded correctly with `<script id="shim-require-id">`
         // This causes BUG in ESN
+        //
+        // Intentional: defaulting `assetsDir` to '' co-locates assets with
+        // `index.html` so CJS `require()` paths like `./foo.js` resolve directly.
+        // When the user sets `assetsDir` explicitly, the `shim-require-id`
+        // script below rewrites `./` paths into that directory.
         config.build.assetsDir ??= ''
         // TODO: compatible with custom assetsDir for static resources
       },
@@ -27,7 +32,7 @@ export default function cjsShim(): Plugin {
     configResolved(_config) {
       config = _config
 
-      const output = config.build.rolldownOptions.output || config.build.rollupOptions.output
+      const output = config.build.rolldownOptions?.output ?? config.build.rollupOptions.output
       if (output) {
         // https://github.com/electron-vite/vite-plugin-electron/issues/6
         // https://github.com/electron-vite/vite-plugin-electron/commit/e6decf42164bc1e3801e27984322c41b9c2724b7#r75138942

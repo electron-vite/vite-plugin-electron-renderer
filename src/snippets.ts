@@ -143,39 +143,16 @@ const electron = typeof require !== 'undefined'
 // Proxy in Worker
 let _ipcRenderer;
 if (typeof document === 'undefined') {
-  _ipcRenderer = {};
-  const keys = [
-    'invoke',
-    'postMessage',
-    'send',
-    'sendSync',
-    'sendTo',
-    'sendToHost',
-    // prototype
-    'addListener',
-    'emit',
-    'eventNames',
-    'getMaxListeners',
-    'listenerCount',
-    'listeners',
-    'off',
-    'on',
-    'once',
-    'prependListener',
-    'prependOnceListener',
-    'rawListeners',
-    'removeAllListeners',
-    'removeListener',
-    'setMaxListeners',
-  ];
-  for (const key of keys) {
-    _ipcRenderer[key] = () => {
+  // Throws on any access so feature-detection (typeof / 'in' / instanceof)
+  // can't be fooled into thinking ipcRenderer is usable inside a Worker.
+  _ipcRenderer = new Proxy({}, {
+    get() {
       throw new Error(
         'ipcRenderer doesn\\'t work in a Web Worker.\\n' +
         'You can see https://github.com/electron-vite/vite-plugin-electron/issues/69'
       );
-    };
-  }
+    },
+  });
 } else {
   _ipcRenderer = electron.ipcRenderer;
 }

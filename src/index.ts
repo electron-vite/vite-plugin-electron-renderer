@@ -2,13 +2,15 @@ import fs from 'node:fs'
 import { builtinModules } from 'node:module'
 import path from 'node:path'
 
-import type { Logger, Plugin as VitePlugin, UserConfig } from 'vite'
+import type { Plugin as VitePlugin, UserConfig, Logger } from 'vite'
 import { createLogger, normalizePath } from 'vite'
 
 import { esmSnippet, cjsSnippet, PLUGIN_NAME, electronSnippet } from './snippets'
 
 const DEFAULT_EXCLUDE = new Set([
   'electron',
+  // Electron subpath imports resolve through the generic CJS shim below
+  // (no dedicated snippet) since they're real CJS submodules in the runtime.
   'electron/main',
   'electron/renderer',
   'electron/common',
@@ -21,14 +23,13 @@ const DEFAULT_EXCLUDE = new Set([
 
 const CACHE_DIR = '/.vite-electron-renderer'
 const TAG = '[electron-renderer]'
-const logger: Logger = createLogger('info', { prefix: TAG })
 
 export interface RendererOptions {
   /**
    * Explicitly tell Vite how to load modules, which is very useful for C/C++ and `esm` modules
    *
    * - `type.cjs` loads through `require()` and exposes statically known names when possible
-   * - `type.esm` loads through top-level `await import()`
+   * - `type.esm` loads through `createRequire()` and exposes statically known names when possible (falls back to dynamic `export *` when introspection fails)
    *
    * Experimental.
    */
@@ -47,6 +48,7 @@ export interface RendererOptions {
 export default function renderer(options: RendererOptions = {}): VitePlugin {
   let cacheDir: string
   let root: string
+  let logger: Logger
   const moduleCache = new Map<string, string>()
 
   const resolveOptions = new Map<string, NonNullable<RendererOptions['resolve']>[string]>()
@@ -74,6 +76,7 @@ export default function renderer(options: RendererOptions = {}): VitePlugin {
     configResolved(config) {
       cacheDir = path.dirname(config.cacheDir) + CACHE_DIR
       root = config.root
+      logger = createLogger(config.logLevel ?? 'info', { prefix: TAG })
     },
     async resolveId(source) {
       if (!DEFAULT_EXCLUDE.has(source) && !resolveOptions.has(source)) {
