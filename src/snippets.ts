@@ -45,13 +45,30 @@ export * from ${JSON.stringify(pkg)};
 
 /**
  * ESM shim for pure-ESM packages.
+ *
+ * Emits a `require()`-based wrapper (via `createRequire`) rather than a
+ * top-level `await import()`. Electron's embedded Node (22+) supports
+ * `require(esm)`, so this works for ESM packages too and keeps the loader
+ * synchronous. If we can't introspect the package at build time we fall back
+ * to a dynamic `export *`.
  */
 export function esmSnippet(moduleId: string, root: string): string {
-  const required = req(moduleId)
-  const named = Object.getOwnPropertyNames(required ?? {})
-    .filter((key) => key !== 'default' && key !== '__esModule' && IDENTIFIER_RE.test(key))
-    .map((key) => `export const ${key} = _m_[${JSON.stringify(key)}];`)
-    .join('\n')
+  let named = ''
+  try {
+    const required = req(moduleId)
+    named = Object.getOwnPropertyNames(required ?? {})
+      .filter((key) => key !== 'default' && key !== '__esModule' && IDENTIFIER_RE.test(key))
+      .map((key) => `export const ${key} = _m_[${JSON.stringify(key)}];`)
+      .join('\n')
+  } catch {
+    return `// [${PLUGIN_NAME}] ESM shim (dynamic) - ${JSON.stringify(moduleId)}
+import { createRequire } from 'node:module';
+const req = createRequire(${JSON.stringify(root)});
+const _m_ = req(${JSON.stringify(moduleId)});
+export default (_m_?.default ?? _m_);
+export * from ${JSON.stringify(moduleId)};
+`
+  }
   return `// [${PLUGIN_NAME}] ESM shim - ${JSON.stringify(moduleId)}
 import { createRequire } from 'node:module';
 const req = createRequire(${JSON.stringify(root)});

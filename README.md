@@ -86,7 +86,7 @@ export interface RendererOptions {
    * Explicitly tell Vite how to load modules, which is very useful for C/C++ and `esm` modules
    *
    * - `type.cjs` loads through `require()` and exposes statically known names when possible
-   * - `type.esm` loads through top-level `await import()`
+   * - `type.esm` loads through `createRequire()` and exposes statically known names when possible (falls back to dynamic `export *` when introspection fails)
    *
    * @experimental
    */
@@ -165,7 +165,7 @@ export const SerialPort = _M_.SerialPort
 // export other members ...
 ```
 
-Modules configured as `esm` are shimmed with top-level `await import()` and re-exported directly.
+Modules configured as `esm` are wrapped with `createRequire()` (Electron's embedded Node 22+ supports `require(esm)`) and re-exported with their statically introspected names. If introspection fails at build time, the shim falls back to a dynamic `export *`.
 
 <!--
 **By the way**. If an npm package is a pure ESM format package, and the packages it depends on are also in ESM format, then put it in `optimizeDeps.exclude` and it will work normally.
