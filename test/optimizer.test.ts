@@ -73,10 +73,14 @@ describe('optimizer', async () => {
       throw new TypeError('renderer plugin is missing a resolveId hook')
     }
 
+    await pluginRenderer.resolveId.call(pluginRenderer as any, 'node:fs', undefined, {} as any)
+    await pluginRenderer.resolveId.call(pluginRenderer as any, 'fs', undefined, {} as any)
     await pluginRenderer.resolveId.call(pluginRenderer as any, 'electron', undefined, {} as any)
     await pluginRenderer.resolveId.call(pluginRenderer as any, 'serialport', undefined, {} as any)
     await pluginRenderer.resolveId.call(pluginRenderer as any, 'node-fetch', undefined, {} as any)
 
+    expect(fs.existsSync(path.join(CACHE_DIR, 'fs.mjs'))).toBe(true)
+    expect(fs.existsSync(path.join(CACHE_DIR, 'node+fs.mjs'))).toBe(false)
     expect(fs.existsSync(path.join(CACHE_DIR, 'electron.mjs'))).toBe(true)
     expect(fs.existsSync(path.join(CACHE_DIR, 'serialport.mjs'))).toBe(true)
     expect(fs.existsSync(path.join(CACHE_DIR, 'node-fetch.mjs'))).toBe(true)
@@ -99,12 +103,19 @@ describe('optimizer', async () => {
       plugins: [pluginRenderer],
     })
 
-    // On Vite 8 the resolveId hook receives the original specifier (`node:fs`),
-    // which encodes to `node+fs.mjs`. The legacy Vite < 8 alias path would
-    // strip `node:` first and produce `fs.mjs`.
+    // Native Node.js modules reuse the same shim cache file with or without the
+    // `node:` prefix.
     expect(fs.readFileSync(path.join(CACHE_DIR, 'electron.mjs'), 'utf8')).toBe(electronSnippet)
-    expect(fs.existsSync(path.join(CACHE_DIR, 'node+fs.mjs'))).toBe(true)
-    expect(fs.existsSync(path.join(CACHE_DIR, 'node+path.mjs'))).toBe(true)
+    expect(fs.existsSync(path.join(CACHE_DIR, 'fs.mjs'))).toBe(true)
+    expect(fs.existsSync(path.join(CACHE_DIR, 'path.mjs'))).toBe(true)
+    expect(fs.existsSync(path.join(CACHE_DIR, 'node+fs.mjs'))).toBe(false)
+    expect(fs.existsSync(path.join(CACHE_DIR, 'node+path.mjs'))).toBe(false)
+    expect(
+      fs.readFileSync(
+        path.join(fixtures, 'dist', 'vite-plugin-electron-renderer-test-fixtures.mjs'),
+        'utf8',
+      ),
+    ).not.toContain('node+')
 
     await viteBuild({
       configFile: false,

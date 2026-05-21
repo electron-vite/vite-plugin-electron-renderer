@@ -14,6 +14,7 @@ const ELECTRON_SUBPATHS = [
   'electron/utility',
 ]
 const NODE_BUILTINS = builtinModules.filter((m) => !m.startsWith('_'))
+const NODE_BUILTIN_SET = new Set(NODE_BUILTINS.map((m) => (m.startsWith('node:') ? m.slice(5) : m)))
 const ALL_BUILTINS = [
   'electron',
   ...ELECTRON_SUBPATHS,
@@ -74,9 +75,20 @@ function createRenderer(options: RendererOptions, isWorker: boolean): VitePlugin
 
   const resolveOptions = new Map<string, NonNullable<RendererOptions['resolve']>[string]>()
   for (const [key, option] of Object.entries(options.resolve ?? {})) {
-    resolveOptions.set(key, option)
+    const normalizedKey =
+      key.startsWith('node:') && NODE_BUILTIN_SET.has(key.slice(5)) ? key.slice(5) : key
+    resolveOptions.set(normalizedKey, option)
   }
   const externalModules = [...new Set([...resolveOptions.keys(), ...ALL_BUILTINS])]
+  const buildModules = [
+    ...new Set(
+      externalModules.map((source) =>
+        source.startsWith('node:') && NODE_BUILTIN_SET.has(source.slice(5))
+          ? source.slice(5)
+          : source,
+      ),
+    ),
+  ]
 
   async function buildSnippet(source: string): Promise<string> {
     const resolved = resolveOptions.get(source)
@@ -104,12 +116,14 @@ function createRenderer(options: RendererOptions, isWorker: boolean): VitePlugin
   }
 
   async function resolveShim(source: string): Promise<string> {
-    const cached = moduleCache.get(source)
+    const cacheKey =
+      source.startsWith('node:') && NODE_BUILTIN_SET.has(source.slice(5)) ? source.slice(5) : source
+    const cached = moduleCache.get(cacheKey)
     if (cached) {
       return cached
     }
-    const snippets = await buildSnippet(source)
-    return writeCacheModule(moduleCache, cacheDir, source, snippets)
+    const snippets = await buildSnippet(cacheKey)
+    return writeCacheModule(moduleCache, cacheDir, cacheKey, snippets)
   }
 
   return {
@@ -206,7 +220,7 @@ function createRenderer(options: RendererOptions, isWorker: boolean): VitePlugin
 
       // Rolldown externalizes these ids before `resolveId` runs, so build-time
       // cache modules must be materialized eagerly.
-      await Promise.all(externalModules.map((source) => resolveShim(source)))
+      await Promise.all(buildModules.map((source) => resolveShim(source)))
     },
     async resolveId(source) {
       if (IS_LEGACY_VITE) {
@@ -263,7 +277,6 @@ function getCacheFile(outDir: string, moduleId: string, extension: string) {
   const root = path.resolve(outDir)
   // Use `+` as the path separator: it's invalid in npm package names and
   // built-in module IDs, so it can't collide with a literal `_`/`-` in a name.
-  // Also drop `:` (invalid on Windows) so `node:fs` becomes `node+fs`.
   const safe = moduleId.replaceAll('/', '+').replaceAll(':', '+')
   const filename = path.resolve(root, `${safe}${extension}`)
   const relativePath = normalizePath(path.relative(root, filename))
