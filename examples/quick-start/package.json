@@ -25,7 +25,6 @@
     "got": "^15.0.3",
     "node-fetch": "catalog:",
     "vite": "catalog:",
-    "vite-plugin-electron": "catalog:",
-    "vite-plugin-electron-renderer": "workspace:*"
+    "vite-plugin-electron": "catalog:"
   }
 }

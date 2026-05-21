@@ -86,10 +86,7 @@ importers:
         version: 8.0.13(@types/node@25.6.0)(jiti@2.7.0)(yaml@2.9.0)
       vite-plugin-electron:
         specifier: 'catalog:'
-        version: 1.0.0-beta.11(vite-plugin-electron-renderer@)
-      vite-plugin-electron-renderer:
-        specifier: workspace:*
-        version: link:../..
+        version: 1.0.0-beta.11
 
   examples/worker:
     devDependencies:
@@ -104,10 +101,7 @@ importers:
         version: 8.0.13(@types/node@25.6.0)(jiti@2.7.0)(yaml@2.9.0)
       vite-plugin-electron:
         specifier: 'catalog:'
-        version: 1.0.0-beta.11(vite-plugin-electron-renderer@)
-      vite-plugin-electron-renderer:
-        specifier: workspace:*
-        version: link:../..
+        version: 1.0.0-beta.11
 
   test/fixtures:
     dependencies:
@@ -3576,11 +3570,9 @@ snapshots:
 
   util-deprecate@1.0.2: {}
 
-  vite-plugin-electron@1.0.0-beta.11(vite-plugin-electron-renderer@):
+  vite-plugin-electron@1.0.0-beta.11:
     dependencies:
       local-pkg: 1.2.0
-    optionalDependencies:
-      vite-plugin-electron-renderer: 'link:'
 
   vite@8.0.13(@types/node@25.6.0)(jiti@2.7.0)(yaml@2.9.0):
     dependencies:

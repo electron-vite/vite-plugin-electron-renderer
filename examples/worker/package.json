@@ -18,7 +18,6 @@
     "electron": "catalog:",
     "typescript": "catalog:",
     "vite": "catalog:",
-    "vite-plugin-electron": "catalog:",
-    "vite-plugin-electron-renderer": "workspace:*"
+    "vite-plugin-electron": "catalog:"
   }
 }
