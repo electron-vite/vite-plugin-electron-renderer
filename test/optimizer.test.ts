@@ -86,22 +86,6 @@ describe('optimizer', async () => {
     fs.rmSync(CACHE_DIR, { recursive: true, force: true })
 
     const pluginRenderer = renderer({ resolve: renderer_resolve })
-    const pluginRendererConfig = pluginRenderer.config
-    if (!pluginRendererConfig) {
-      throw new TypeError('renderer plugin is missing a config hook')
-    }
-    const pluginRendererConfigHandler =
-      typeof pluginRendererConfig === 'function'
-        ? pluginRendererConfig
-        : pluginRendererConfig.handler
-
-    pluginRenderer.config = {
-      ...(typeof pluginRendererConfig === 'object' ? pluginRendererConfig : {}),
-      handler(config, env) {
-        env.command = 'serve'
-        return pluginRendererConfigHandler.call(pluginRenderer as any, config, env)
-      },
-    }
 
     await viteBuild({
       configFile: false,

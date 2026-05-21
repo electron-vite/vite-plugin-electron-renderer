@@ -2,7 +2,7 @@ import fs from 'node:fs'
 import { builtinModules } from 'node:module'
 import path from 'node:path'
 
-import type { Alias, BuildOptions, Plugin as VitePlugin, UserConfig, Logger } from 'vite'
+import type { Alias, Plugin as VitePlugin, UserConfig, Logger } from 'vite'
 import { createLogger, normalizePath, version as viteVersion } from 'vite'
 
 import { esmSnippet, cjsSnippet, PLUGIN_NAME, electronSnippet } from './snippets'
@@ -62,6 +62,10 @@ export default function renderer(options: RendererOptions = {}): VitePlugin {
   return createRenderer(options, false)
 }
 
+type RolldownExternal = NonNullable<
+  NonNullable<NonNullable<UserConfig['build']>['rolldownOptions']>['external']
+>
+
 function createRenderer(options: RendererOptions, isWorker: boolean): VitePlugin {
   let cacheDir: string
   let root: string
@@ -72,6 +76,7 @@ function createRenderer(options: RendererOptions, isWorker: boolean): VitePlugin
   for (const [key, option] of Object.entries(options.resolve ?? {})) {
     resolveOptions.set(key, option)
   }
+  const externalModules = [...new Set([...resolveOptions.keys(), ...ALL_BUILTINS])]
 
   async function buildSnippet(source: string): Promise<string> {
     const resolved = resolveOptions.get(source)
@@ -119,7 +124,7 @@ function createRenderer(options: RendererOptions, isWorker: boolean): VitePlugin
           conditions: ['node'],
         },
         optimizeDeps: {
-          exclude: [...resolveOptions.keys(), ...ALL_BUILTINS],
+          exclude: externalModules,
         },
       }
 
@@ -154,15 +159,36 @@ function createRenderer(options: RendererOptions, isWorker: boolean): VitePlugin
         // Rollup-only options: freeze namespace objects (so fs-extra etc.
         // can extend `fs`) and tell `@rollup/plugin-commonjs` to skip our
         // builtins. Rolldown handles both natively in Vite 8.
-        config.build ??= {}
-        applyLegacyBuildAdjustments(config.build)
-      } else if (!isWorker) {
-        // Vite 8 worker sub-configs don't inherit plugins from the parent
-        // (the `resolveId` hook below won't fire for Web Worker imports),
-        // so re-register the plugin under `worker.plugins`. Guarded by
-        // `!isWorker` to avoid recursion.
-        partial.worker = {
-          plugins: () => [createRenderer(options, true)],
+        partial.build = {
+          commonjsOptions: {
+            ignore: ALL_BUILTINS,
+          },
+          rollupOptions: {
+            output: toArray(config.build?.rollupOptions?.output).map((opt) =>
+              Object.assign({}, opt, { freeze: false }),
+            ),
+          },
+        }
+      } else {
+        // App builds should externalize renderer shims in Rolldown. Library
+        // builds are used by Vite's pre-bundling path and still need shim
+        // modules to be generated on resolve.
+        partial.build = {
+          rolldownOptions: {
+            external: mergeExternalOptions(
+              config.build?.rolldownOptions?.external,
+              externalModules,
+            ),
+          },
+        }
+        if (!isWorker) {
+          // Vite 8 worker sub-configs don't inherit plugins from the parent
+          // (the `resolveId` hook below won't fire for Web Worker imports),
+          // so re-register the plugin under `worker.plugins`. Guarded by
+          // `!isWorker` to avoid recursion.
+          partial.worker = {
+            plugins: () => [createRenderer(options, true)],
+          }
         }
       }
 
@@ -172,6 +198,15 @@ function createRenderer(options: RendererOptions, isWorker: boolean): VitePlugin
       cacheDir = path.dirname(config.cacheDir) + CACHE_DIR
       root = config.root
       logger = createLogger(config.logLevel ?? 'info', { prefix: TAG })
+    },
+    async buildStart() {
+      if (IS_LEGACY_VITE) {
+        return
+      }
+
+      // Rolldown externalizes these ids before `resolveId` runs, so build-time
+      // cache modules must be materialized eagerly.
+      await Promise.all(externalModules.map((source) => resolveShim(source)))
     },
     async resolveId(source) {
       if (IS_LEGACY_VITE) {
@@ -186,54 +221,26 @@ function createRenderer(options: RendererOptions, isWorker: boolean): VitePlugin
   }
 }
 
-function applyLegacyBuildAdjustments(build: BuildOptions) {
-  // Prevent Rollup from freezing namespace objects, so packages like
-  // `fs-extra` can extend the native `fs` module without throwing
-  // "Cannot add property X, object is not extensible" at runtime.
-  // (Rolldown in Vite 8 doesn't accept `freeze`, so we only set this for the
-  // legacy Rollup-based path.)
-  const rollup = (build.rollupOptions ??= {})
-  rollup.output = withFreezeFalse(rollup.output)
-
-  // Tell `@rollup/plugin-commonjs` to leave Electron/Node builtins alone —
-  // it can't reassign externals, so without this it errors on `require('fs')`.
-  // See https://github.com/rollup/plugins/blob/commonjs-v24.0.0/packages/commonjs/src/helpers.js#L55-L60
-  build.commonjsOptions ??= {}
-  addCommonjsIgnore(build.commonjsOptions, ALL_BUILTINS)
+function toArray<T>(item: T | T[] | undefined): T[] {
+  return Array.isArray(item) ? item : item ? [item] : []
 }
 
-function withFreezeFalse<T>(output: T): T {
-  if (!output) {
-    return { freeze: false } as T
+function mergeExternalOptions(
+  existing: RolldownExternal | undefined,
+  additions: string[],
+): RolldownExternal {
+  if (!existing) {
+    return [...additions]
   }
-  if (Array.isArray(output)) {
-    for (const o of output) {
-      ;(o as { freeze?: boolean }).freeze ??= false
-    }
-  } else {
-    ;(output as { freeze?: boolean }).freeze ??= false
-  }
-  return output
-}
 
-function addCommonjsIgnore(
-  opts: NonNullable<BuildOptions['commonjsOptions']>,
-  modules: string[],
-): void {
-  if (opts.ignore) {
-    if (typeof opts.ignore === 'function') {
-      const userIgnore = opts.ignore
-      opts.ignore = (id) => userIgnore(id) === true || modules.includes(id)
-    } else if (Array.isArray(opts.ignore)) {
-      for (const m of modules) {
-        if (!opts.ignore.includes(m)) {
-          opts.ignore.push(m)
-        }
-      }
-    }
-  } else {
-    opts.ignore = [...modules]
+  if (typeof existing === 'function') {
+    const additionSet = new Set(additions)
+    return ((source: string, importer: string | undefined, isResolved: boolean) => {
+      return existing(source, importer, isResolved) || additionSet.has(source)
+    }) as RolldownExternal
   }
+
+  return [...new Set([...toArray(existing), ...additions])]
 }
 
 function writeCacheModule(
