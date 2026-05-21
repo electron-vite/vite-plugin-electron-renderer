@@ -140,7 +140,7 @@ describe('optimizer', async () => {
     const nodeFetchSnippet = fs.readFileSync(nodeFetchWrapper, 'utf8')
     expect(nodeFetchSnippet).toMatch('const _m_ = req("node-fetch")')
     expect(nodeFetchSnippet).toMatch('export default (_m_?.default ?? _m_);')
-    expect(nodeFetchSnippet).toMatch('export const AbortError = _m_["AbortError"];')
+    expect(nodeFetchSnippet).toMatch(/__export_\d+__ as AbortError,/)
     fs.rmSync(path.join(fixtures, 'dist'), { recursive: true, force: true })
   })
 })

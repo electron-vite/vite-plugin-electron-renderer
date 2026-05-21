@@ -5,6 +5,26 @@ export const PLUGIN_NAME = 'vite-plugin-electron-renderer'
 const req = createRequire(import.meta.url)
 const IDENTIFIER_RE = /^[$A-Z_][0-9A-Z_$]*$/i
 
+function staticNamedExports(exportKeys: string[]): string {
+  const bindings = [...new Set(exportKeys)]
+    .filter((key) => key !== 'default' && key !== '__esModule' && IDENTIFIER_RE.test(key))
+    .map((key, index) => ({
+      key,
+      binding: `__export_${index}__`,
+    }))
+
+  if (bindings.length === 0) {
+    return ''
+  }
+
+  const declarations = bindings
+    .map(({ binding, key }) => `const ${binding} = _m_[${JSON.stringify(key)}];`)
+    .join('\n')
+  const exports = bindings.map(({ binding, key }) => `  ${binding} as ${key},`).join('\n')
+
+  return `${declarations}\nexport {\n${exports}\n};`
+}
+
 export function cjsSnippet(moduleId: string): string {
   try {
     const required = req(moduleId)
@@ -19,10 +39,7 @@ export function cjsSnippet(moduleId: string): string {
  * Preferred because Rolldown can tree-shake static exports.
  */
 function cjsShimStatic(pkg: string, exportKeys: string[]): string {
-  const named = [...new Set(exportKeys)]
-    .filter((key) => key !== 'default' && key !== '__esModule' && IDENTIFIER_RE.test(key))
-    .map((key) => `export const ${key} = _m_[${JSON.stringify(key)}];`)
-    .join('\n')
+  const named = staticNamedExports(exportKeys)
 
   // `const _r_ = require` aliases the runtime `require` so static analyzers
   // (esbuild, @rollup/plugin-commonjs) in vite < 8 don't rewrite this call.
@@ -60,10 +77,7 @@ export function esmSnippet(moduleId: string, root: string): string {
   let named = ''
   try {
     const required = req(moduleId)
-    named = Object.getOwnPropertyNames(required ?? {})
-      .filter((key) => key !== 'default' && key !== '__esModule' && IDENTIFIER_RE.test(key))
-      .map((key) => `export const ${key} = _m_[${JSON.stringify(key)}];`)
-      .join('\n')
+    named = staticNamedExports(Object.getOwnPropertyNames(required ?? {}))
   } catch {
     return `// [${PLUGIN_NAME}] ESM shim (dynamic) - ${JSON.stringify(moduleId)}
 import { createRequire } from 'node:module';
