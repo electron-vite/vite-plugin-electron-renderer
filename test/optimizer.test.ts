@@ -34,6 +34,15 @@ function getConfig(command: 'build' | 'serve', options?: RendererOptions) {
   )
 }
 
+function getResolveIdHandler(plugin: ReturnType<typeof renderer>) {
+  const resolveId = plugin.resolveId
+  if (!resolveId) {
+    throw new TypeError('renderer plugin is missing a resolveId hook')
+  }
+
+  return typeof resolveId === 'function' ? resolveId : resolveId.handler
+}
+
 describe('optimizer', async () => {
   it('optimizeDeps.exclude', async () => {
     const buildExclude = (await getConfig('build')).optimizeDeps.exclude
@@ -69,15 +78,13 @@ describe('optimizer', async () => {
     expect(fs.existsSync(path.join(CACHE_DIR, 'serialport.mjs'))).toBe(false)
     expect(fs.existsSync(path.join(CACHE_DIR, 'node-fetch.mjs'))).toBe(false)
 
-    if (typeof pluginRenderer.resolveId !== 'function') {
-      throw new TypeError('renderer plugin is missing a resolveId hook')
-    }
+    const resolveId = getResolveIdHandler(pluginRenderer)
 
-    await pluginRenderer.resolveId.call(pluginRenderer as any, 'node:fs', undefined, {} as any)
-    await pluginRenderer.resolveId.call(pluginRenderer as any, 'fs', undefined, {} as any)
-    await pluginRenderer.resolveId.call(pluginRenderer as any, 'electron', undefined, {} as any)
-    await pluginRenderer.resolveId.call(pluginRenderer as any, 'serialport', undefined, {} as any)
-    await pluginRenderer.resolveId.call(pluginRenderer as any, 'node-fetch', undefined, {} as any)
+    await resolveId.call(pluginRenderer as any, 'node:fs', undefined, {} as any)
+    await resolveId.call(pluginRenderer as any, 'fs', undefined, {} as any)
+    await resolveId.call(pluginRenderer as any, 'electron', undefined, {} as any)
+    await resolveId.call(pluginRenderer as any, 'serialport', undefined, {} as any)
+    await resolveId.call(pluginRenderer as any, 'node-fetch', undefined, {} as any)
 
     expect(fs.existsSync(path.join(CACHE_DIR, 'fs.mjs'))).toBe(true)
     expect(fs.existsSync(path.join(CACHE_DIR, 'node+fs.mjs'))).toBe(false)

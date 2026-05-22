@@ -7,24 +7,24 @@ import { createLogger, normalizePath } from 'vite'
 
 import { esmSnippet, cjsSnippet, PLUGIN_NAME, electronSnippet } from './snippets'
 
-const ELECTRON_SUBPATHS = [
+const ELECTRON_PATHS = [
+  'electron',
   'electron/main',
   'electron/renderer',
   'electron/common',
   'electron/utility',
 ]
 const NODE_BUILTINS = builtinModules.filter((m) => !m.startsWith('_'))
-const NODE_BUILTIN_SET = new Set(NODE_BUILTINS.map((m) => (m.startsWith('node:') ? m.slice(5) : m)))
+
 const ALL_BUILTINS = [
-  'electron',
-  ...ELECTRON_SUBPATHS,
+  ...ELECTRON_PATHS,
   ...NODE_BUILTINS,
   ...NODE_BUILTINS.filter((m) => !m.startsWith('node:')).map((m) => `node:${m}`),
 ]
-const SHIMMED = new Set(ALL_BUILTINS)
 
 const CACHE_DIR = '/.vite-electron-renderer'
 const TAG = '[electron-renderer]'
+const RE_ESCAPE = /[\\^$.*+?()[\]{}|]/g
 
 export interface RendererOptions {
   /**
@@ -57,25 +57,11 @@ function createRenderer(options: RendererOptions, isWorker: boolean): VitePlugin
   let logger: Logger
   const moduleCache = new Map<string, string>()
 
-  const resolveOptions = new Map<string, NonNullable<RendererOptions['resolve']>[string]>()
-  for (const [key, option] of Object.entries(options.resolve ?? {})) {
-    const normalizedKey =
-      key.startsWith('node:') && NODE_BUILTIN_SET.has(key.slice(5)) ? key.slice(5) : key
-    resolveOptions.set(normalizedKey, option)
-  }
-  const externalModules = [...new Set([...resolveOptions.keys(), ...ALL_BUILTINS])]
-  const buildModules = [
-    ...new Set(
-      externalModules.map((source) =>
-        source.startsWith('node:') && NODE_BUILTIN_SET.has(source.slice(5))
-          ? source.slice(5)
-          : source,
-      ),
-    ),
-  ]
+  const resolveOptions = options.resolve ?? {}
+  const externalModules = [...new Set([...Object.keys(resolveOptions), ...ALL_BUILTINS])]
 
   async function buildSnippet(source: string): Promise<string> {
-    const resolved = resolveOptions.get(source)
+    const resolved = resolveOptions[source]
 
     if (source === 'electron') {
       return electronSnippet
@@ -100,8 +86,7 @@ function createRenderer(options: RendererOptions, isWorker: boolean): VitePlugin
   }
 
   async function resolveShim(source: string): Promise<string> {
-    const cacheKey =
-      source.startsWith('node:') && NODE_BUILTIN_SET.has(source.slice(5)) ? source.slice(5) : source
+    const cacheKey = source.startsWith('node:') ? source.slice(5) : source
     const cached = moduleCache.get(cacheKey)
     if (cached) {
       return cached
@@ -150,16 +135,16 @@ function createRenderer(options: RendererOptions, isWorker: boolean): VitePlugin
       root = config.root
       logger = createLogger(config.logLevel ?? 'info', { prefix: TAG })
     },
-    async buildStart() {
-      // Rolldown externalizes these ids before `resolveId` runs, so build-time
-      // cache modules must be materialized eagerly.
-      await Promise.all(buildModules.map((source) => resolveShim(source)))
-    },
-    async resolveId(source) {
-      if (!SHIMMED.has(source) && !resolveOptions.has(source)) {
-        return null
-      }
-      return resolveShim(source)
+    resolveId: {
+      order: 'pre',
+      filter: {
+        id: new RegExp(
+          `^(?:${externalModules.map((s) => s.replace(RE_ESCAPE, '\\$&')).join('|')})$`,
+        ),
+      },
+      async handler(source) {
+        return resolveShim(source)
+      },
     },
   }
 }

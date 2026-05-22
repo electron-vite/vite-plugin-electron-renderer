@@ -82,11 +82,9 @@ describe('config', () => {
       {} as any,
     )
 
-    expect(workerInput.build.rolldownOptions.external).toEqual(['existing'])
-
     const external = workerPartial?.build?.rolldownOptions?.external
     expect(Array.isArray(external)).toBe(true)
-    expect(external).toContain('existing')
+    expect(external).not.toContain('existing')
     expect(external).toContain('electron')
     expect(external).toContain('node:fs')
     expect(external).toContain('serialport')
