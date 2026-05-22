@@ -45,7 +45,7 @@ npm i vite-plugin-electron-renderer -D
 > **Breaking change (v1)**:
 >
 > - Drop Vite < 8 support.
-> - `resolve.*.type: 'esm'` now wraps pure-ESM packages with `createRequire()` instead of pre-bundling them to CJS via esbuild. This requires Electron's embedded Node to support `require(esm)` — **Electron 33+ (Node 22+) is recommended**; on Electron 30–32 the `--experimental-require-module` flag is needed. Packages that contain top-level `await` are not supported.
+> - `resolve.*.type: 'esm'` now wraps pure-ESM packages with `createRequire()` instead of pre-bundling them to CJS via esbuild. This requires Electron's embedded Node to support `require(esm)` — **Electron 35+ (Node 22+) is recommended**; on Electron 30–34 the `--experimental-require-module` flag is needed. Packages that contain top-level `await` are not supported.
 >
 > For old behavior, use v0.14.7 instead.
 
