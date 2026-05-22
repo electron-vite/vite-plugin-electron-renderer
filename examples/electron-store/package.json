@@ -1,0 +1,23 @@
+{
+  "name": "vite-plugin-electron-renderer-electron-store",
+  "version": "0.0.0",
+  "private": true,
+  "license": "MIT",
+  "author": "草鞋没号 <308487730@qq.com>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/electron-vite/vite-plugin-electron-renderer.git",
+    "directory": "examples/electron-store"
+  },
+  "main": "dist-electron/main.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build"
+  },
+  "devDependencies": {
+    "electron": "catalog:",
+    "electron-store": "^11.0.2",
+    "vite": "catalog:",
+    "vite-plugin-electron": "catalog:"
+  }
+}

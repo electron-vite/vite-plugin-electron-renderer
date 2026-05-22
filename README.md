@@ -110,6 +110,7 @@ export interface RendererOptions {
 ## [Examples](https://github.com/electron-vite/vite-plugin-electron-renderer/tree/main/examples)
 
 - [quick-start](https://github.com/electron-vite/vite-plugin-electron-renderer/tree/main/examples/quick-start)
+- [electron-store](https://github.com/electron-vite/vite-plugin-electron-renderer/tree/main/examples/electron-store)
 
 ## How to work
 

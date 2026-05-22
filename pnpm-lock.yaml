@@ -57,6 +57,21 @@ importers:
         specifier: ^4.1.7
         version: 4.1.7(@types/node@25.6.0)(vite@8.0.13(@types/node@25.6.0)(jiti@2.7.0)(yaml@2.9.0))
 
+  examples/electron-store:
+    devDependencies:
+      electron:
+        specifier: 'catalog:'
+        version: 40.9.1
+      electron-store:
+        specifier: ^11.0.2
+        version: 11.0.2
+      vite:
+        specifier: 'catalog:'
+        version: 8.0.13(@types/node@25.6.0)(jiti@2.7.0)(yaml@2.9.0)
+      vite-plugin-electron:
+        specifier: 'catalog:'
+        version: 1.0.0-beta.12
+
   examples/quick-start:
     dependencies:
       serialport:

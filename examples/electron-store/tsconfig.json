@@ -1,0 +1,6 @@
+{
+  "extends": "@subf/config/tsconfig-web",
+  "compilerOptions": {
+    "types": ["vite-plugin-electron/electron-env"]
+  }
+}

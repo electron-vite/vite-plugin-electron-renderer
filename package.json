@@ -37,6 +37,8 @@
     "build": "tsdown",
     "example": "pnpm --dir examples/quick-start dev",
     "example:build": "pnpm --dir examples/quick-start build",
+    "example:store": "pnpm --dir examples/electron-store dev",
+    "example:store:build": "pnpm --dir examples/electron-store build",
     "example:worker": "pnpm --dir examples/worker dev",
     "example:worker:build": "pnpm --dir examples/worker build",
     "lint": "oxlint --fix",
