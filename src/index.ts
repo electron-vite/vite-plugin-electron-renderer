@@ -2,8 +2,8 @@ import fs from 'node:fs'
 import { builtinModules } from 'node:module'
 import path from 'node:path'
 
-import type { Alias, Plugin as VitePlugin, UserConfig, Logger } from 'vite'
-import { createLogger, normalizePath, version as viteVersion } from 'vite'
+import type { Plugin as VitePlugin, UserConfig, Logger } from 'vite'
+import { createLogger, normalizePath } from 'vite'
 
 import { esmSnippet, cjsSnippet, PLUGIN_NAME, electronSnippet } from './snippets'
 
@@ -22,18 +22,6 @@ const ALL_BUILTINS = [
   ...NODE_BUILTINS.filter((m) => !m.startsWith('node:')).map((m) => `node:${m}`),
 ]
 const SHIMMED = new Set(ALL_BUILTINS)
-// Used only on Vite < 8: top-level builtins with optional `node:` prefix
-const ALIAS_TOPLEVEL_RE = new RegExp(`^(?:node:)?(${['electron', ...NODE_BUILTINS].join('|')})$`)
-// Used only on Vite < 8: Electron subpaths
-const ALIAS_SUBPATH_RE = new RegExp(
-  `^(${ELECTRON_SUBPATHS.map((s) => s.replaceAll('/', '\\/')).join('|')})$`,
-)
-const REG_ESCAPE = /[.*+?^${}()|[\]\\]/g
-
-// Vite 8 shares plugins with Web Worker sub-configs, so the `resolveId` hook
-// is enough. Vite < 8 workers inherit `resolve.alias` but NOT plugins, so we
-// fall back to alias + `customResolver` for those versions.
-const IS_LEGACY_VITE = Number.parseInt(viteVersion) < 8
 
 const CACHE_DIR = '/.vite-electron-renderer'
 const TAG = '[electron-renderer]'
@@ -62,10 +50,6 @@ export interface RendererOptions {
 export default function renderer(options: RendererOptions = {}): VitePlugin {
   return createRenderer(options, false)
 }
-
-type RolldownExternal = NonNullable<
-  NonNullable<NonNullable<UserConfig['build']>['rolldownOptions']>['external']
->
 
 function createRenderer(options: RendererOptions, isWorker: boolean): VitePlugin {
   let cacheDir: string
@@ -140,69 +124,22 @@ function createRenderer(options: RendererOptions, isWorker: boolean): VitePlugin
         optimizeDeps: {
           exclude: externalModules,
         },
-      }
-
-      if (IS_LEGACY_VITE) {
-        // Worker sub-configs inherit `resolve.alias` but not plugins, so
-        // register builtins via `customResolver` for Vite < 8 only.
-        const aliasResolver = (async (source: string) => ({
-          id: await resolveShim(source),
-        })) as unknown as Alias['customResolver']
-        const aliases: Alias[] = [
-          {
-            find: ALIAS_TOPLEVEL_RE,
-            replacement: '$1',
-            customResolver: aliasResolver,
-          },
-          {
-            find: ALIAS_SUBPATH_RE,
-            replacement: '$1',
-            customResolver: aliasResolver,
-          },
-        ]
-        if (resolveOptions.size > 0) {
-          const keys = [...resolveOptions.keys()].map((s) => s.replace(REG_ESCAPE, '\\$&'))
-          aliases.push({
-            find: new RegExp(`^(${keys.join('|')})$`),
-            replacement: '$1',
-            customResolver: aliasResolver,
-          })
-        }
-        partial.resolve!.alias = aliases
-
-        // Rollup-only options: freeze namespace objects (so fs-extra etc.
-        // can extend `fs`) and tell `@rollup/plugin-commonjs` to skip our
-        // builtins. Rolldown handles both natively in Vite 8.
-        partial.build = {
-          commonjsOptions: {
-            ignore: ALL_BUILTINS,
-          },
-          rollupOptions: {
-            output: toArray(config.build?.rollupOptions?.output).map((opt) =>
-              Object.assign({}, opt, { freeze: false }),
-            ),
-          },
-        }
-      } else {
         // App builds should externalize renderer shims in Rolldown. Library
         // builds are used by Vite's pre-bundling path and still need shim
         // modules to be generated on resolve.
-        partial.build = {
+        build: {
           rolldownOptions: {
-            external: mergeExternalOptions(
-              config.build?.rolldownOptions?.external,
-              externalModules,
-            ),
+            external: externalModules,
           },
-        }
-        if (!isWorker) {
-          // Vite 8 worker sub-configs don't inherit plugins from the parent
-          // (the `resolveId` hook below won't fire for Web Worker imports),
-          // so re-register the plugin under `worker.plugins`. Guarded by
-          // `!isWorker` to avoid recursion.
-          partial.worker = {
-            plugins: () => [createRenderer(options, true)],
-          }
+        },
+      }
+
+      if (!isWorker) {
+        // Vite worker sub-configs use a separate plugin container, so
+        // re-register the plugin under `worker.plugins`. Guarded by
+        // `!isWorker` to avoid recursion.
+        partial.worker = {
+          plugins: () => [createRenderer(options, true)],
         }
       }
 
@@ -214,47 +151,17 @@ function createRenderer(options: RendererOptions, isWorker: boolean): VitePlugin
       logger = createLogger(config.logLevel ?? 'info', { prefix: TAG })
     },
     async buildStart() {
-      if (IS_LEGACY_VITE) {
-        return
-      }
-
       // Rolldown externalizes these ids before `resolveId` runs, so build-time
       // cache modules must be materialized eagerly.
       await Promise.all(buildModules.map((source) => resolveShim(source)))
     },
     async resolveId(source) {
-      if (IS_LEGACY_VITE) {
-        // Handled by `resolve.alias` customResolver above
-        return null
-      }
       if (!SHIMMED.has(source) && !resolveOptions.has(source)) {
         return null
       }
       return resolveShim(source)
     },
   }
-}
-
-function toArray<T>(item: T | T[] | undefined): T[] {
-  return Array.isArray(item) ? item : item ? [item] : []
-}
-
-function mergeExternalOptions(
-  existing: RolldownExternal | undefined,
-  additions: string[],
-): RolldownExternal {
-  if (!existing) {
-    return [...additions]
-  }
-
-  if (typeof existing === 'function') {
-    const additionSet = new Set(additions)
-    return ((source: string, importer: string | undefined, isResolved: boolean) => {
-      return existing(source, importer, isResolved) || additionSet.has(source)
-    }) as RolldownExternal
-  }
-
-  return [...new Set([...toArray(existing), ...additions])]
 }
 
 function writeCacheModule(

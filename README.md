@@ -32,13 +32,11 @@
 In short, `vite-plugin-electron-renderer` is responsible for polyfilling Electron, Node.js built-in modules and other npm packages for the Renderer process.
 
 > [!important]
->
 > This plugin is currently in v1 beta development. Use it at your own risk.
 >
-> This plugin does not compatibile to Vite Environment API, so run with the new `vite-plugin-electron/multi-env` maybe broken. Please use `vite-plugin-electron` instead.
-
-> [!warning]
-> **Breaking change (v1):** `resolve.*.type: 'esm'` now wraps pure-ESM packages with `createRequire()` instead of pre-bundling them to CJS via esbuild. This requires Electron's embedded Node to support `require(esm)` — **Electron 33+ (Node 22+) is recommended**; on Electron 30–32 the `--experimental-require-module` flag is needed. Packages that contain top-level `await` are not supported.
+> **Breaking change (v1)**:
+> - Drop Vite < 8 support.
+> - `resolve.*.type: 'esm'` now wraps pure-ESM packages with `createRequire()` instead of pre-bundling them to CJS via esbuild. This requires Electron's embedded Node to support `require(esm)` — **Electron 33+ (Node 22+) is recommended**; on Electron 30–32 the `--experimental-require-module` flag is needed. Packages that contain top-level `await` are not supported.
 >
 > For old behavior, use v0.14.7 instead.
 
