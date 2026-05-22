@@ -2,12 +2,11 @@ import fs from 'node:fs'
 import { builtinModules } from 'node:module'
 import path from 'node:path'
 
-import { build as viteBuild, resolveConfig } from 'vite'
+import { build as viteBuild, parseAst, resolveConfig } from 'vite'
 import { describe, expect, it } from 'vitest'
 
 import type { RendererOptions } from '../src/index'
 import { default as renderer } from '../src/index'
-import { electronSnippet } from '../src/snippets'
 
 const fixtures = path.join(__dirname, 'fixtures')
 const CACHE_DIR = path.join(fixtures, 'node_modules/.vite-electron-renderer')
@@ -41,6 +40,23 @@ function getResolveIdHandler(plugin: ReturnType<typeof renderer>) {
   }
 
   return typeof resolveId === 'function' ? resolveId : resolveId.handler
+}
+
+function getTransformHandler(plugin: ReturnType<typeof renderer>) {
+  const transform = plugin.transform
+  if (!transform) {
+    throw new TypeError('renderer plugin is missing a transform hook')
+  }
+
+  return typeof transform === 'function' ? transform : transform.handler
+}
+
+function createTransformContext() {
+  return {
+    parse(code: string) {
+      return parseAst(code)
+    },
+  }
 }
 
 describe('optimizer', async () => {
@@ -110,19 +126,18 @@ describe('optimizer', async () => {
       plugins: [pluginRenderer],
     })
 
-    // Native Node.js modules reuse the same shim cache file with or without the
-    // `node:` prefix.
-    expect(fs.readFileSync(path.join(CACHE_DIR, 'electron.mjs'), 'utf8')).toBe(electronSnippet)
-    expect(fs.existsSync(path.join(CACHE_DIR, 'fs.mjs'))).toBe(true)
-    expect(fs.existsSync(path.join(CACHE_DIR, 'path.mjs'))).toBe(true)
-    expect(fs.existsSync(path.join(CACHE_DIR, 'node+fs.mjs'))).toBe(false)
-    expect(fs.existsSync(path.join(CACHE_DIR, 'node+path.mjs'))).toBe(false)
-    expect(
-      fs.readFileSync(
-        path.join(fixtures, 'dist', 'vite-plugin-electron-renderer-test-fixtures.mjs'),
-        'utf8',
-      ),
-    ).not.toContain('node+')
+    const builtinBundle = fs.readFileSync(
+      path.join(fixtures, 'dist', 'vite-plugin-electron-renderer-test-fixtures.mjs'),
+      'utf8',
+    )
+
+    expect(fs.existsSync(path.join(CACHE_DIR, 'electron.mjs'))).toBe(false)
+    expect(fs.existsSync(path.join(CACHE_DIR, 'fs.mjs'))).toBe(false)
+    expect(fs.existsSync(path.join(CACHE_DIR, 'path.mjs'))).toBe(false)
+    expect(builtinBundle).toContain('e("node:fs").readFile')
+    expect(builtinBundle).toContain('e("electron").ipcRenderer')
+    expect(builtinBundle).toContain('Promise.resolve().then(() => e("node:path"))')
+    expect(builtinBundle).not.toContain('.vite-electron-renderer')
 
     await viteBuild({
       configFile: false,
@@ -136,13 +151,98 @@ describe('optimizer', async () => {
       plugins: [pluginRenderer],
     })
 
-    expect(fs.existsSync(path.join(CACHE_DIR, 'serialport.mjs'))).toBe(true)
-    expect(fs.existsSync(path.join(CACHE_DIR, 'node-fetch.mjs'))).toBe(true)
-    const nodeFetchWrapper = path.join(CACHE_DIR, 'node-fetch.mjs')
-    const nodeFetchSnippet = fs.readFileSync(nodeFetchWrapper, 'utf8')
-    expect(nodeFetchSnippet).toMatch('const _m_ = req("node-fetch")')
-    expect(nodeFetchSnippet).toMatch('export default (_m_?.default ?? _m_);')
-    expect(nodeFetchSnippet).toMatch(/__export_\d+__ as AbortError,/)
+    const thirdPartyBundle = fs.readFileSync(
+      path.join(fixtures, 'dist', 'vite-plugin-electron-renderer-test-fixtures.mjs'),
+      'utf8',
+    )
+    expect(fs.existsSync(path.join(CACHE_DIR, 'serialport.mjs'))).toBe(false)
+    expect(fs.existsSync(path.join(CACHE_DIR, 'node-fetch.mjs'))).toBe(false)
+    expect(thirdPartyBundle).toContain('e("serialport")')
+    expect(thirdPartyBundle).toContain('Promise.resolve().then(() => e("node-fetch"))')
     fs.rmSync(path.join(fixtures, 'dist'), { recursive: true, force: true })
+  })
+
+  it('rewrites matched static imports to runtime require calls for app builds', async () => {
+    const pluginRenderer = renderer({ resolve: renderer_resolve })
+
+    await resolveConfig(
+      {
+        configFile: false,
+        root: fixtures,
+        plugins: [pluginRenderer],
+      },
+      'build',
+    )
+
+    const transform = getTransformHandler(pluginRenderer)
+    const transformed = await transform.call(
+      createTransformContext() as any,
+      [
+        "import { ipcRenderer } from 'electron'",
+        "import fs from 'node:fs/promises'",
+        "import { SerialPort as Port } from 'serialport'",
+        'import "./local"',
+        'const electronMod = import("electron")',
+        'const serialportMod = import("serialport")',
+        'const localMod = import("./dynamic-local")',
+        '',
+        "const snippet = `import { ipcRenderer } from 'electron'`",
+        'console.log(ipcRenderer, fs, Port, electronMod, serialportMod, localMod, snippet)',
+      ].join('\n'),
+      path.join(fixtures, 'renderer-entry.ts'),
+    )
+
+    expect(transformed).toEqual({
+      code: [
+        'const __electron_import_0__ = require("electron");',
+        'const ipcRenderer = __electron_import_0__["ipcRenderer"];',
+        'const __electron_import_1__ = require("node:fs/promises");',
+        'const fs = __electron_import_1__?.default ?? __electron_import_1__;',
+        'const __electron_import_2__ = require("serialport");',
+        'const Port = __electron_import_2__["SerialPort"];',
+        'import "./local"',
+        'const electronMod = Promise.resolve().then(() => require("electron"))',
+        'const serialportMod = Promise.resolve().then(() => require("serialport"))',
+        'const localMod = import("./dynamic-local")',
+        '',
+        "const snippet = `import { ipcRenderer } from 'electron'`",
+        'console.log(ipcRenderer, fs, Port, electronMod, serialportMod, localMod, snippet)',
+      ].join('\n'),
+      map: null,
+    })
+  })
+
+  it('rewrites matched imports for library builds too', async () => {
+    const pluginRenderer = renderer({ resolve: renderer_resolve })
+
+    await resolveConfig(
+      {
+        configFile: false,
+        root: fixtures,
+        build: {
+          lib: {
+            entry: path.join(fixtures, 'builtins.ts'),
+            formats: ['es'],
+          },
+        },
+        plugins: [pluginRenderer],
+      },
+      'build',
+    )
+
+    const transform = getTransformHandler(pluginRenderer)
+    const transformed = await transform.call(
+      createTransformContext() as any,
+      "import { ipcRenderer } from 'electron'\nconsole.log(ipcRenderer)\n",
+      path.join(fixtures, 'renderer-entry.ts'),
+    )
+
+    expect(transformed).toEqual({
+      code: `const __electron_import_0__ = require("electron");
+const ipcRenderer = __electron_import_0__["ipcRenderer"];
+console.log(ipcRenderer)
+`,
+      map: null,
+    })
   })
 })

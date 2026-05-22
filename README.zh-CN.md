@@ -26,6 +26,14 @@
 
 <br/>
 
+## 安装
+
+```sh
+npm i vite-plugin-electron-renderer -D
+```
+
+## 用法
+
 > [!warning]
 > 在 Electron 中不推荐使用 `nodeIntegration`，而且这个插件并不能解决它可能带来的安全问题。如果你要使用这个插件，请先明确启用 `nodeIntegration` 的安全影响，并采取相应的缓解措施。
 
@@ -35,18 +43,11 @@
 > 这个插件目前处于 v1 beta 开发阶段。请自行承担使用风险。
 >
 > **Breaking change (v1)**:
+>
 > - 已移除 Vite < 8 支持。
 > - `resolve.*.type: 'esm'` 现在会使用 `createRequire()` 包装纯 ESM 包，而不再通过 esbuild 预构建成 CJS。这要求 Electron 内置的 Node 支持 `require(esm)`，推荐使用 **Electron 33+（Node 22+）**；在 Electron 30–32 上需要 `--experimental-require-module` 标志。包含顶层 `await` 的包不受支持。
 >
 > 旧行为请使用 v0.14.7。
-
-## 安装
-
-```sh
-npm i vite-plugin-electron-renderer -D
-```
-
-## 用法
 
 1. 这只会修改 Vite 的部分默认配置，让 Renderer 进程可以正常工作。
 
@@ -58,7 +59,7 @@ export default {
 }
 ```
 
-2. 在 Renderer 进程中使用第三方 `C/C++`、`esm` 包。
+1. 在 Renderer 进程中使用第三方 `C/C++`、`esm` 包。
 
 ```js
 import renderer from 'vite-plugin-electron-renderer'

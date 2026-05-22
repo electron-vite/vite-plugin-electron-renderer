@@ -14,6 +14,7 @@ export default defineConfig({
         got: { type: 'esm' }, // pure-ESM package
         serialport: { type: 'cjs' }, // C/C++ native addon
         execa: { type: 'esm' }, // pure-ESM package
+        'node-fetch': { type: 'esm' }, // pure-ESM package
       },
     }),
   ],
