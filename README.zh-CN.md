@@ -45,7 +45,7 @@ npm i vite-plugin-electron-renderer -D
 > **Breaking change (v1)**:
 >
 > - 已移除 Vite < 8 支持。
-> - `resolve.*.type: 'esm'` 现在会使用 `createRequire()` 包装纯 ESM 包，而不再通过 esbuild 预构建成 CJS。这要求 Electron 内置的 Node 支持 `require(esm)`，推荐使用 **Electron 33+（Node 22+）**；在 Electron 30–32 上需要 `--experimental-require-module` 标志。包含顶层 `await` 的包不受支持。
+> - `resolve.*.type: 'esm'` 现在会使用 `createRequire()` 包装纯 ESM 包，而不再通过 esbuild 预构建成 CJS。这要求 Electron 内置的 Node 支持 `require(esm)`，推荐使用 **Electron 35+（Node 22+）**；在 Electron 30–34 上需要 `--experimental-require-module` 标志。包含顶层 `await` 的包不受支持。
 >
 > 旧行为请使用 v0.14.7。
 
