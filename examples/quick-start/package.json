@@ -19,12 +19,14 @@
     "sqlite3": "^6.0.1"
   },
   "devDependencies": {
+    "@vitejs/plugin-vue": "^6.0.3",
     "electron": "catalog:",
     "electron-store": "^11.0.2",
     "execa": "^9.6.1",
     "got": "^15.0.3",
     "node-fetch": "catalog:",
     "vite": "catalog:",
-    "vite-plugin-electron": "catalog:"
+    "vite-plugin-electron": "catalog:",
+    "vue": "^3.5.24"
   }
 }

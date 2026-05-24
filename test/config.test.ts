@@ -88,8 +88,28 @@ describe('config', () => {
     expect(external).toContain('electron')
     expect(external).toContain('node:fs')
     expect(external).toContain('serialport')
-    expect(external).toContain('node-fetch')
+    expect(external).not.toContain('node-fetch')
 
     expect(workerInput.build.rolldownOptions.external).toEqual(['existing'])
+  })
+
+  it('honors explicit bundle flags in worker external config', async () => {
+    const plugin = renderer({
+      resolve: {
+        bundledCjs: { type: 'cjs', bundle: true },
+        runtimeEsm: { type: 'esm', bundle: false },
+      },
+    })
+    const rootPartial = await getConfigHandler(plugin).call(plugin as any, {}, {} as any)
+    const [workerPlugin] = rootPartial!.worker!.plugins!() as ReturnType<typeof renderer>[]
+    const workerPartial = await getConfigHandler(workerPlugin).call(
+      workerPlugin as any,
+      {} as any,
+      {} as any,
+    )
+
+    const external = workerPartial?.build?.rolldownOptions?.external
+    expect(external).not.toContain('bundledCjs')
+    expect(external).toContain('runtimeEsm')
   })
 })

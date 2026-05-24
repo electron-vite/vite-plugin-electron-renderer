@@ -72,13 +72,15 @@ export default {
         serialport: { type: 'cjs' },
         // Pure ESM modules can be loaded through dynamic import()
         got: { type: 'esm' },
+        // Pure CJS modules can opt into production bundling
+        somePureCjsPackage: { type: 'cjs', bundle: true },
       },
     }),
   ],
 }
 ```
 
-> By the way, if a module is marked as `type: 'cjs'`, the plugin just loads it in using `require()`. So it should be put into `dependencies`.
+> By default, `type: 'cjs'` modules stay on runtime `require()` and should be put into `dependencies`. `type: 'esm'` modules are bundled in production builds unless `bundle: false` is set.
 
 ## API _(Define)_
 
@@ -97,6 +99,12 @@ export interface RendererOptions {
   resolve?: {
     [module: string]: {
       type: 'cjs' | 'esm'
+      /**
+       * Whether this dependency should be bundled in production builds.
+       *
+       * Defaults to `true` for `type: 'esm'`, and `false` for `type: 'cjs'`.
+       */
+      bundle?: boolean
       /** Full custom how to generate the shim module */
       build?: (args: {
         cjs: (module: string) => Promise<string>
@@ -170,7 +178,7 @@ export const SerialPort = _M_.SerialPort
 // export other members ...
 ```
 
-Modules configured as `esm` are wrapped with `createRequire()` (Electron's embedded Node 22+ supports `require(esm)`) and re-exported with their statically introspected names. If introspection fails at build time, the shim falls back to a dynamic `export *`.
+Modules configured as `esm` are bundled in production builds by default. Set `bundle: false` to keep them on the runtime shim path, where they are wrapped with `createRequire()` (Electron's embedded Node 22+ supports `require(esm)`) and re-exported with their statically introspected names. If introspection fails at build time, the shim falls back to a dynamic `export *`.
 
 <!--
 **By the way**. If an npm package is a pure ESM format package, and the packages it depends on are also in ESM format, then put it in `optimizeDeps.exclude` and it will work normally.

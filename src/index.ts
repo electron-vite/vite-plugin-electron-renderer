@@ -2,8 +2,8 @@ import fs from 'node:fs'
 import { builtinModules } from 'node:module'
 import path from 'node:path'
 
-import type { Plugin as VitePlugin, UserConfig, Logger } from 'vite'
-import { createLogger, normalizePath } from 'vite'
+import type { Plugin as VitePlugin, UserConfig, Logger, ResolvedConfig } from 'vite'
+import { build as viteBuild, createLogger, normalizePath } from 'vite'
 
 import { esmSnippet, cjsSnippet, PLUGIN_NAME, electronSnippet } from './snippets'
 
@@ -25,6 +25,8 @@ const ALL_BUILTINS = [
 ]
 
 const CACHE_DIR = '/.vite-electron-renderer'
+const BUNDLE_ENTRY_DIR = `${CACHE_DIR}/entries`
+const BUNDLE_OUT_DIR = `${CACHE_DIR}/bundled`
 const TAG = '[electron-renderer]'
 const RE_ESCAPE = /[\\^$.*+?()[\]{}|]/g
 const SCRIPT_EXT_RE = /\.[cm]?[jt]sx?(?:[?#].*)?$/
@@ -41,6 +43,12 @@ export interface RendererOptions {
   resolve?: {
     [module: string]: {
       type: 'cjs' | 'esm'
+      /**
+       * Whether this dependency should be bundled in production builds.
+       *
+       * Defaults to `true` for `type: 'esm'`, and `false` for `type: 'cjs'`.
+       */
+      bundle?: boolean
       /** Full custom how to generate the shim module */
       build?: (args: {
         cjs: (module: string) => Promise<string>
@@ -58,11 +66,105 @@ function createRenderer(options: RendererOptions, isWorker: boolean): VitePlugin
   let cacheDir: string
   let root: string
   let logger: Logger
+  let resolvedConfig: ResolvedConfig
   let isBuild = false
   const moduleCache = new Map<string, string>()
+  const bundledModuleCache = new Map<string, string>()
+  const bundledBuildPromises = new Map<string, Promise<string>>()
+  let bundledEntryDir: string
+  let bundledOutDir: string
 
   const resolveOptions = options.resolve ?? {}
-  const externalModules = [...new Set([...Object.keys(resolveOptions), ...ALL_BUILTINS])]
+  const resolveEntries = Object.entries(resolveOptions)
+  const bundledModules = resolveEntries
+    .filter(([, option]) => shouldBundleDependency(option))
+    .map(([module]) => module)
+  const shimmedModules = [
+    ...new Set([
+      ...resolveEntries
+        .filter(([, option]) => !shouldBundleDependency(option))
+        .map(([module]) => module),
+      ...ALL_BUILTINS,
+    ]),
+  ]
+  const resolvedModules = [...new Set([...Object.keys(resolveOptions), ...ALL_BUILTINS])]
+  const bundledModuleSet = new Set(bundledModules)
+  const shimmedModuleSet = new Set(shimmedModules)
+
+  function bundleDependency(source: string): Promise<string> {
+    const cached = bundledModuleCache.get(source)
+    if (cached) {
+      return Promise.resolve(cached)
+    }
+
+    const pending = bundledBuildPromises.get(source)
+    if (pending) {
+      return pending
+    }
+
+    const entryFile = writeGeneratedModule(
+      bundledEntryDir,
+      source,
+      `import * as _m_ from ${JSON.stringify(source)};
+export default (_m_?.default ?? _m_);
+export * from ${JSON.stringify(source)};
+`,
+    )
+
+    logger.info(`Bundle resolve dep: ${source}`, { timestamp: true })
+
+    const promise = viteBuild({
+      configFile: false,
+      root,
+      publicDir: false,
+      logLevel: 'error',
+      cacheDir: path.join(bundledOutDir, '.vite'),
+      resolve: {
+        alias: resolvedConfig.resolve.alias,
+        conditions: ['node', ...resolvedConfig.resolve.conditions],
+      },
+      build: {
+        copyPublicDir: false,
+        emptyOutDir: false,
+        lib: {
+          entry: {
+            [path.basename(entryFile, '.mjs')]: entryFile,
+          },
+          formats: ['es'],
+        },
+        modulePreload: false,
+        outDir: bundledOutDir,
+        target: 'esnext',
+        rolldownOptions: {
+          external: shimmedModules,
+          output: {
+            entryFileNames: '[name].mjs',
+            chunkFileNames: 'chunks/[name]-[hash].mjs',
+            exports: 'named',
+          },
+        },
+      },
+    })
+      .then(() => {
+        const bundledFile = getCacheFile(bundledOutDir, source, '.mjs').filename
+        if (!fs.existsSync(bundledFile)) {
+          throw new TypeError(`Missing bundled output for ${JSON.stringify(source)}`)
+        }
+
+        bundledModuleCache.set(source, bundledFile)
+        return bundledFile
+      })
+      .catch((error) => {
+        logger.error(`Failed to bundle ${source}: ${error.message}`, { timestamp: true })
+        throw error
+      })
+      .finally(() => {
+        bundledBuildPromises.delete(source)
+      })
+
+    bundledBuildPromises.set(source, promise)
+    return promise
+  }
 
   async function buildSnippet(source: string): Promise<string> {
     const resolved = resolveOptions[source]
@@ -95,30 +197,37 @@ function createRenderer(options: RendererOptions, isWorker: boolean): VitePlugin
     if (cached) {
       return cached
     }
-    const snippets = await buildSnippet(cacheKey)
-    return writeCacheModule(moduleCache, cacheDir, cacheKey, snippets)
+    const resolved = writeGeneratedModule(cacheDir, cacheKey, await buildSnippet(cacheKey))
+    moduleCache.set(cacheKey, resolved)
+    return resolved
   }
 
-  const externalModulesRegex = new RegExp(
-    `^(?:${externalModules.map((s) => s.replace(RE_ESCAPE, '\\$&')).join('|')})$`,
+  const resolvedModulesRegex = new RegExp(
+    `^(?:${resolvedModules.map((s) => s.replace(RE_ESCAPE, '\\$&')).join('|')})$`,
+  )
+  const shimmedModulesRegex = new RegExp(
+    `^(?:${shimmedModules.map((s) => s.replace(RE_ESCAPE, '\\$&')).join('|')})$`,
   )
   return {
     name: PLUGIN_NAME,
     enforce: 'pre',
-    async config(config) {
+    async config(config, env) {
       moduleCache.clear()
+      bundledModuleCache.clear()
+      bundledBuildPromises.clear()
+      isBuild = env.command === 'build'
 
       const partial: UserConfig = {
         base: config.base ?? './',
         optimizeDeps: {
-          exclude: externalModules,
+          exclude: resolvedModules,
         },
         // App builds should externalize renderer shims in Rolldown. Library
         // builds are used by Vite's pre-bundling path and still need shim
         // modules to be generated on resolve.
         build: {
           rolldownOptions: {
-            external: externalModules,
+            external: shimmedModules,
           },
         },
       }
@@ -129,7 +238,7 @@ function createRenderer(options: RendererOptions, isWorker: boolean): VitePlugin
         // `!isWorker` to avoid recursion.
         partial.worker = {
           rolldownOptions: {
-            external: externalModules,
+            external: shimmedModules,
           },
           plugins: () => [createRenderer(options, true)],
         }
@@ -139,23 +248,29 @@ function createRenderer(options: RendererOptions, isWorker: boolean): VitePlugin
     },
     configResolved(config) {
       cacheDir = path.dirname(config.cacheDir) + CACHE_DIR
+      bundledEntryDir = path.dirname(config.cacheDir) + BUNDLE_ENTRY_DIR
+      bundledOutDir = path.dirname(config.cacheDir) + BUNDLE_OUT_DIR
       root = config.root
+      resolvedConfig = config
       logger = createLogger(config.logLevel ?? 'info', { prefix: TAG })
       isBuild = config.command === 'build'
     },
     resolveId: {
       order: 'pre',
       filter: {
-        id: externalModulesRegex,
+        id: resolvedModulesRegex,
       },
       async handler(source) {
+        if (isBuild && bundledModuleSet.has(source)) {
+          return bundleDependency(source)
+        }
         return resolveShim(source)
       },
     },
     transform: {
       order: 'post',
       filter: {
-        code: [/import/, externalModulesRegex],
+        code: [/import/, shimmedModulesRegex],
         id: SCRIPT_EXT_RE,
       },
       async handler(code) {
@@ -166,7 +281,7 @@ function createRenderer(options: RendererOptions, isWorker: boolean): VitePlugin
         const transformed = rewriteStaticImports(
           code,
           this.parse(code) as Program,
-          new Set(externalModules),
+          shimmedModuleSet,
         )
         return transformed ? { code: transformed, map: null } : null
       },
@@ -248,6 +363,10 @@ function rewriteStaticImports(
   return output
 }
 
+function shouldBundleDependency(option: NonNullable<RendererOptions['resolve']>[string]): boolean {
+  return option.bundle ?? (option.type === 'esm' && typeof option.build !== 'function')
+}
+
 function collectDynamicImportExpressions(program: Program): ImportExpression[] {
   const dynamicImports: ImportExpression[] = []
   const stack: unknown[] = [program]
@@ -320,20 +439,11 @@ function buildRequireImport(node: ImportDeclartion, index: number): string {
   return lines.join('\n')
 }
 
-function writeCacheModule(
-  moduleCache: Map<string, string>,
-  outDir: string,
-  source: string,
-  content: string, // Lazy initialization
-): string {
-  let id = moduleCache.get(source)
-  if (!id) {
-    id = getCacheFile(outDir, source, '.mjs').filename
-    fs.mkdirSync(path.dirname(id), { recursive: true })
-    fs.writeFileSync(id, content)
-    moduleCache.set(source, id)
-  }
-  return id
+function writeGeneratedModule(outDir: string, moduleId: string, content: string): string {
+  const filename = getCacheFile(outDir, moduleId, '.mjs').filename
+  fs.mkdirSync(path.dirname(filename), { recursive: true })
+  fs.writeFileSync(filename, content)
+  return filename
 }
 
 function getCacheFile(outDir: string, moduleId: string, extension: string) {

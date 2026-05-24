@@ -72,13 +72,15 @@ export default {
         serialport: { type: 'cjs' },
         // 纯 ESM 模块可以通过动态 import() 加载
         got: { type: 'esm' },
+        // 纯 CJS 模块可以显式选择在生产构建中打包
+        somePureCjsPackage: { type: 'cjs', bundle: true },
       },
     }),
   ],
 }
 ```
 
-> 顺带一提，如果某个模块被标记为 `type: 'cjs'`，插件只是用 `require()` 加载它，所以它应该放在 `dependencies` 里。
+> 默认情况下，`type: 'cjs'` 模块会保持运行时 `require()`，应放在 `dependencies` 中。`type: 'esm'` 模块会在生产构建中打包，除非设置 `bundle: false`。
 
 ## API _(定义)_
 
@@ -97,6 +99,12 @@ export interface RendererOptions {
   resolve?: {
     [module: string]: {
       type: 'cjs' | 'esm'
+      /**
+       * 是否在生产构建中打包该依赖。
+       *
+       * `type: 'esm'` 默认是 `true`，`type: 'cjs'` 默认是 `false`。
+       */
+      bundle?: boolean
       /** 完全自定义如何生成 shim 模块 */
       build?: (args: {
         cjs: (module: string) => Promise<string>
@@ -165,7 +173,7 @@ export const SerialPort = _M_.SerialPort
 // 其他导出 ...
 ```
 
-配置为 `esm` 的模块会通过 `createRequire()` 包装（Electron 内置的 Node 22+ 支持 `require(esm)`），并按构建时静态推断到的名称重新导出。如果推断失败，shim 会回退为动态的 `export *`。
+配置为 `esm` 的模块默认会在生产构建中打包。设置 `bundle: false` 后会保留运行时 shim 路径，通过 `createRequire()` 包装（Electron 内置的 Node 22+ 支持 `require(esm)`），并按构建时静态推断到的名称重新导出。如果推断失败，shim 会回退为动态的 `export *`。
 
 ## dependencies 与 devDependencies
 

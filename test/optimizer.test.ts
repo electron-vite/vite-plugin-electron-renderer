@@ -10,9 +10,18 @@ import { default as renderer } from '../src/index'
 
 const fixtures = path.join(__dirname, 'fixtures')
 const CACHE_DIR = path.join(fixtures, 'node_modules/.vite-electron-renderer')
+const BUNDLED_CACHE_DIR = path.join(CACHE_DIR, 'bundled')
 const renderer_resolve: RendererOptions['resolve'] = {
   serialport: { type: 'cjs' },
   'node-fetch': { type: 'esm' },
+}
+const renderer_multi_bundle_resolve: RendererOptions['resolve'] = {
+  'node-fetch': { type: 'esm' },
+  'fixture-esm': { type: 'esm' },
+}
+const renderer_bundle_flags: RendererOptions['resolve'] = {
+  bundledCjs: { type: 'cjs', bundle: true },
+  runtimeEsm: { type: 'esm', bundle: false },
 }
 
 const builtins = [
@@ -75,6 +84,11 @@ describe('optimizer', async () => {
       .optimizeDeps.exclude
     expect(resolveBuildExclude).toContain('serialport')
     expect(resolveBuildExclude).toContain('node-fetch')
+
+    const explicitBundleExclude = (await getConfig('build', { resolve: renderer_bundle_flags }))
+      .optimizeDeps.exclude
+    expect(explicitBundleExclude).toContain('bundledCjs')
+    expect(explicitBundleExclude).toContain('runtimeEsm')
   })
 
   it('writes cache modules lazily on resolve', async () => {
@@ -92,7 +106,7 @@ describe('optimizer', async () => {
 
     expect(fs.existsSync(path.join(CACHE_DIR, 'electron.mjs'))).toBe(false)
     expect(fs.existsSync(path.join(CACHE_DIR, 'serialport.mjs'))).toBe(false)
-    expect(fs.existsSync(path.join(CACHE_DIR, 'node-fetch.mjs'))).toBe(false)
+    expect(fs.existsSync(path.join(BUNDLED_CACHE_DIR, 'node-fetch.mjs'))).toBe(false)
 
     const resolveId = getResolveIdHandler(pluginRenderer)
 
@@ -100,13 +114,68 @@ describe('optimizer', async () => {
     await resolveId.call(pluginRenderer as any, 'fs', undefined, {} as any)
     await resolveId.call(pluginRenderer as any, 'electron', undefined, {} as any)
     await resolveId.call(pluginRenderer as any, 'serialport', undefined, {} as any)
-    await resolveId.call(pluginRenderer as any, 'node-fetch', undefined, {} as any)
+    const nodeFetchBuildResolution = await resolveId.call(
+      pluginRenderer as any,
+      'node-fetch',
+      undefined,
+      {} as any,
+    )
 
     expect(fs.existsSync(path.join(CACHE_DIR, 'fs.mjs'))).toBe(true)
     expect(fs.existsSync(path.join(CACHE_DIR, 'node+fs.mjs'))).toBe(false)
     expect(fs.existsSync(path.join(CACHE_DIR, 'electron.mjs'))).toBe(true)
     expect(fs.existsSync(path.join(CACHE_DIR, 'serialport.mjs'))).toBe(true)
+    expect(nodeFetchBuildResolution).toBe(path.join(BUNDLED_CACHE_DIR, 'node-fetch.mjs'))
+    expect(fs.existsSync(path.join(BUNDLED_CACHE_DIR, 'node-fetch.mjs'))).toBe(true)
+
+    const pluginRendererServe = renderer({ resolve: renderer_resolve })
+    await resolveConfig(
+      {
+        configFile: false,
+        root: fixtures,
+        plugins: [pluginRendererServe],
+      },
+      'serve',
+    )
+
+    const serveResolveId = getResolveIdHandler(pluginRendererServe)
+    const nodeFetchServeResolution = await serveResolveId.call(
+      pluginRendererServe as any,
+      'node-fetch',
+      undefined,
+      {} as any,
+    )
+
+    expect(nodeFetchServeResolution).toBe(path.join(CACHE_DIR, 'node-fetch.mjs'))
     expect(fs.existsSync(path.join(CACHE_DIR, 'node-fetch.mjs'))).toBe(true)
+  })
+
+  it('builds bundled deps only when requested', async () => {
+    fs.rmSync(CACHE_DIR, { recursive: true, force: true })
+
+    const pluginRenderer = renderer({ resolve: renderer_multi_bundle_resolve })
+    await resolveConfig(
+      {
+        configFile: false,
+        root: fixtures,
+        plugins: [pluginRenderer],
+      },
+      'build',
+    )
+
+    const resolveId = getResolveIdHandler(pluginRenderer)
+
+    expect(fs.existsSync(path.join(BUNDLED_CACHE_DIR, 'node-fetch.mjs'))).toBe(false)
+    expect(fs.existsSync(path.join(BUNDLED_CACHE_DIR, 'fixture-esm.mjs'))).toBe(false)
+
+    await resolveId.call(pluginRenderer as any, 'node-fetch', undefined, {} as any)
+
+    expect(fs.existsSync(path.join(BUNDLED_CACHE_DIR, 'node-fetch.mjs'))).toBe(true)
+    expect(fs.existsSync(path.join(BUNDLED_CACHE_DIR, 'fixture-esm.mjs'))).toBe(false)
+
+    await resolveId.call(pluginRenderer as any, 'fixture-esm', undefined, {} as any)
+
+    expect(fs.existsSync(path.join(BUNDLED_CACHE_DIR, 'fixture-esm.mjs'))).toBe(true)
   })
 
   it('pre-bundling', async () => {
@@ -156,9 +225,9 @@ describe('optimizer', async () => {
       'utf8',
     )
     expect(fs.existsSync(path.join(CACHE_DIR, 'serialport.mjs'))).toBe(false)
-    expect(fs.existsSync(path.join(CACHE_DIR, 'node-fetch.mjs'))).toBe(false)
-    expect(thirdPartyBundle).toContain('e("serialport")')
-    expect(thirdPartyBundle).toContain('Promise.resolve().then(() => e("node-fetch"))')
+    expect(fs.existsSync(path.join(BUNDLED_CACHE_DIR, 'node-fetch.mjs'))).toBe(true)
+    expect(thirdPartyBundle).toContain('("serialport")')
+    expect(thirdPartyBundle).not.toContain('Promise.resolve().then(() => e("node-fetch"))')
     fs.rmSync(path.join(fixtures, 'dist'), { recursive: true, force: true })
   })
 
@@ -181,13 +250,15 @@ describe('optimizer', async () => {
         "import { ipcRenderer } from 'electron'",
         "import fs from 'node:fs/promises'",
         "import { SerialPort as Port } from 'serialport'",
+        "import fetch from 'node-fetch'",
         'import "./local"',
         'const electronMod = import("electron")',
         'const serialportMod = import("serialport")',
+        'const nodeFetchMod = import("node-fetch")',
         'const localMod = import("./dynamic-local")',
         '',
         "const snippet = `import { ipcRenderer } from 'electron'`",
-        'console.log(ipcRenderer, fs, Port, electronMod, serialportMod, localMod, snippet)',
+        'console.log(ipcRenderer, fs, Port, fetch, electronMod, serialportMod, nodeFetchMod, localMod, snippet)',
       ].join('\n'),
       path.join(fixtures, 'renderer-entry.ts'),
     )
@@ -200,13 +271,53 @@ describe('optimizer', async () => {
         'const fs = __electron_import_1__?.default ?? __electron_import_1__;',
         'const __electron_import_2__ = require("serialport");',
         'const Port = __electron_import_2__["SerialPort"];',
+        "import fetch from 'node-fetch'",
         'import "./local"',
         'const electronMod = Promise.resolve().then(() => require("electron"))',
         'const serialportMod = Promise.resolve().then(() => require("serialport"))',
+        'const nodeFetchMod = import("node-fetch")',
         'const localMod = import("./dynamic-local")',
         '',
         "const snippet = `import { ipcRenderer } from 'electron'`",
-        'console.log(ipcRenderer, fs, Port, electronMod, serialportMod, localMod, snippet)',
+        'console.log(ipcRenderer, fs, Port, fetch, electronMod, serialportMod, nodeFetchMod, localMod, snippet)',
+      ].join('\n'),
+      map: null,
+    })
+  })
+
+  it('uses explicit bundle flags when rewriting imports for app builds', async () => {
+    const pluginRenderer = renderer({ resolve: renderer_bundle_flags })
+
+    await resolveConfig(
+      {
+        configFile: false,
+        root: fixtures,
+        plugins: [pluginRenderer],
+      },
+      'build',
+    )
+
+    const transform = getTransformHandler(pluginRenderer)
+    const transformed = await transform.call(
+      createTransformContext() as any,
+      [
+        "import bundledCjs from 'bundledCjs'",
+        "import runtimeEsm from 'runtimeEsm'",
+        'const bundledCjsMod = import("bundledCjs")',
+        'const runtimeEsmMod = import("runtimeEsm")',
+        'console.log(bundledCjs, runtimeEsm, bundledCjsMod, runtimeEsmMod)',
+      ].join('\n'),
+      path.join(fixtures, 'renderer-entry.ts'),
+    )
+
+    expect(transformed).toEqual({
+      code: [
+        "import bundledCjs from 'bundledCjs'",
+        'const __electron_import_0__ = require("runtimeEsm");',
+        'const runtimeEsm = __electron_import_0__?.default ?? __electron_import_0__;',
+        'const bundledCjsMod = import("bundledCjs")',
+        'const runtimeEsmMod = Promise.resolve().then(() => require("runtimeEsm"))',
+        'console.log(bundledCjs, runtimeEsm, bundledCjsMod, runtimeEsmMod)',
       ].join('\n'),
       map: null,
     })
