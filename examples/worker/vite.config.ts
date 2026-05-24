@@ -9,7 +9,7 @@ export default defineConfig({
   },
   plugins: [
     electron({
-      entry: ['electron/main.ts', 'electron/worker.ts'],
+      entry: ['electron/main.ts'],
     }),
     renderer(),
   ],

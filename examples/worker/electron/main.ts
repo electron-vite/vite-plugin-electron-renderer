@@ -1,5 +1,4 @@
 import path from 'node:path'
-import { Worker } from 'node:worker_threads'
 
 import { app, BrowserWindow } from 'electron'
 
@@ -23,11 +22,6 @@ app.whenReady().then(() => {
   } else {
     win.loadFile(path.join(__dirname, '../dist/index.html'))
   }
-
-  const worker = new Worker(path.join(__dirname, './worker.js'))
-  worker.on('message', (value) => {
-    console.log('[worker message]:', value)
-  })
 })
 
 app.on('window-all-closed', () => {
