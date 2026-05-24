@@ -86,9 +86,9 @@ function createRenderer(options: RendererOptions, isWorker: boolean): VitePlugin
 
   const resolveOptions = options.resolve ?? {}
   const resolveEntries = Object.entries(resolveOptions)
-  const bundledModules = resolveEntries
-    .filter(([, option]) => shouldBundleDependency(option))
-    .map(([module]) => module)
+  const bundledModuleSet = new Set(
+    resolveEntries.filter(([, option]) => shouldBundleDependency(option)).map(([module]) => module),
+  )
   const shimmedModules = [
     ...new Set([
       ...resolveEntries
@@ -98,8 +98,6 @@ function createRenderer(options: RendererOptions, isWorker: boolean): VitePlugin
     ]),
   ]
   const resolvedModules = [...new Set([...Object.keys(resolveOptions), ...ALL_BUILTINS])]
-  const bundledModuleSet = new Set(bundledModules)
-  const shimmedModuleSet = new Set(shimmedModules)
 
   function bundleDependency(source: string, format: BundleFormat = 'es'): Promise<string> {
     const cacheKey = `${format}:${source}`
@@ -297,7 +295,7 @@ export * from ${JSON.stringify(source)};
         const transformed = rewriteStaticImports(
           code,
           this.parse(code) as Program,
-          shimmedModuleSet,
+          new Set(shimmedModules),
         )
         return transformed ? { code: transformed, map: null } : null
       },

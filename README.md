@@ -91,9 +91,9 @@ export default {
 ```ts
 export interface RendererOptions {
   /**
-    * Compatibility option for Electron < 35.
-    * Pre-build `resolve.*.type = 'esm'` deps to CJS during dev so the shim can
-    * stay on plain `require()`.
+   * Compatibility option for Electron < 35.
+   * Pre-build `resolve.*.type = 'esm'` deps to CJS during dev so the shim can
+   * stay on plain `require()`.
    */
   prebuildEsm?: boolean
   /**

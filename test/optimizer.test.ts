@@ -189,6 +189,11 @@ describe('optimizer', async () => {
       {
         configFile: false,
         root: fixtures,
+        resolve: {
+          alias: {
+            'fixture-esm': path.join(fixtures, 'fixture-esm/index.js'),
+          },
+        },
         plugins: [pluginRenderer],
       },
       'build',

@@ -91,9 +91,9 @@ export default {
 ```ts
 export interface RendererOptions {
   /**
-    * 兼容 Electron < 35 的选项。
-    * 在 dev 阶段把 `resolve.*.type = 'esm'` 的依赖预构建成 CJS，
-    * 这样生成的 shim 仍然可以走普通 `require()`。
+   * 兼容 Electron < 35 的选项。
+   * 在 dev 阶段把 `resolve.*.type = 'esm'` 的依赖预构建成 CJS，
+   * 这样生成的 shim 仍然可以走普通 `require()`。
    */
   prebuildEsm?: boolean
   /**
