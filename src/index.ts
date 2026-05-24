@@ -7,6 +7,8 @@ import { createLogger, normalizePath } from 'vite'
 
 import { esmSnippet, cjsSnippet, PLUGIN_NAME, electronSnippet } from './snippets'
 
+export { electronSnippet as electron } from './snippets'
+
 const ELECTRON_PATHS = [
   'electron',
   'electron/main',
