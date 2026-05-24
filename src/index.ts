@@ -128,6 +128,9 @@ function createRenderer(options: RendererOptions, isWorker: boolean): VitePlugin
         // re-register the plugin under `worker.plugins`. Guarded by
         // `!isWorker` to avoid recursion.
         partial.worker = {
+          rolldownOptions: {
+            external: externalModules,
+          },
           plugins: () => [createRenderer(options, true)],
         }
       }

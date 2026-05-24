@@ -89,5 +89,7 @@ describe('config', () => {
     expect(external).toContain('node:fs')
     expect(external).toContain('serialport')
     expect(external).toContain('node-fetch')
+
+    expect(workerInput.build.rolldownOptions.external).toEqual(['existing'])
   })
 })

@@ -245,4 +245,39 @@ console.log(ipcRenderer)
       map: null,
     })
   })
+
+  it('externalizes worker shims during app builds', async () => {
+    const outDir = path.join(fixtures, 'dist-worker')
+
+    fs.rmSync(outDir, { recursive: true, force: true })
+
+    await viteBuild({
+      configFile: false,
+      root: fixtures,
+      build: {
+        minify: false,
+        outDir,
+        rollupOptions: {
+          input: path.join(fixtures, 'worker-index.html'),
+        },
+      },
+      plugins: [renderer()],
+    })
+
+    const assetFiles = fs.readdirSync(path.join(outDir, 'assets'))
+    const workerAsset = assetFiles.find(
+      (file) => file.startsWith('worker-') && file.endsWith('.js'),
+    )
+
+    expect(workerAsset).toBeDefined()
+
+    const workerBundle = fs.readFileSync(path.join(outDir, 'assets', workerAsset!), 'utf8')
+
+    expect(workerBundle).toContain('require("node:fs/promises")')
+    expect(workerBundle).toContain('require("node:path")["join"]')
+    expect(workerBundle).not.toContain('.vite-electron-renderer')
+    expect(workerBundle).not.toContain('__exportAll')
+
+    fs.rmSync(outDir, { recursive: true, force: true })
+  })
 })
