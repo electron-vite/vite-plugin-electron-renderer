@@ -110,9 +110,6 @@ function createRenderer(options: RendererOptions, isWorker: boolean): VitePlugin
 
       const partial: UserConfig = {
         base: config.base ?? './',
-        resolve: {
-          conditions: ['node'],
-        },
         optimizeDeps: {
           exclude: externalModules,
         },
