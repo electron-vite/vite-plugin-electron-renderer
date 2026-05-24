@@ -16,6 +16,7 @@ export default defineConfig({
       entry: 'electron/main.ts',
     }),
     renderer({
+      // prebuildEsm: true,
       resolve: {
         sqlite3: { type: 'cjs', bundle: true }, // C/C++ native addon
         got: { type: 'esm' }, // pure-ESM package

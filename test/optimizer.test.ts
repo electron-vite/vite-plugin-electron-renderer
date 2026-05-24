@@ -11,6 +11,7 @@ import { default as renderer } from '../src/index'
 const fixtures = path.join(__dirname, 'fixtures')
 const CACHE_DIR = path.join(fixtures, 'node_modules/.vite-electron-renderer')
 const BUNDLED_CACHE_DIR = path.join(CACHE_DIR, 'bundled')
+const BUNDLED_CJS_CACHE_DIR = path.join(CACHE_DIR, 'bundled-cjs')
 const renderer_resolve: RendererOptions['resolve'] = {
   serialport: { type: 'cjs' },
   'node-fetch': { type: 'esm' },
@@ -148,6 +149,36 @@ describe('optimizer', async () => {
 
     expect(nodeFetchServeResolution).toBe(path.join(CACHE_DIR, 'node-fetch.mjs'))
     expect(fs.existsSync(path.join(CACHE_DIR, 'node-fetch.mjs'))).toBe(true)
+  })
+
+  it('falls back to bundled cjs shims for esm deps during dev', async () => {
+    fs.rmSync(CACHE_DIR, { recursive: true, force: true })
+
+    const pluginRendererServe = renderer({
+      prebuildEsm: true,
+      resolve: renderer_resolve,
+    })
+    await resolveConfig(
+      {
+        configFile: false,
+        root: fixtures,
+        plugins: [pluginRendererServe],
+      },
+      'serve',
+    )
+
+    const serveResolveId = getResolveIdHandler(pluginRendererServe)
+    const nodeFetchServeResolution = await serveResolveId.call(
+      pluginRendererServe as any,
+      'node-fetch',
+      undefined,
+      {} as any,
+    )
+
+    const bundledCjsFile = path.join(BUNDLED_CJS_CACHE_DIR, 'node-fetch.cjs')
+    expect(nodeFetchServeResolution).toBe(path.join(CACHE_DIR, 'node-fetch.mjs'))
+    expect(fs.existsSync(bundledCjsFile)).toBe(true)
+    expect(fs.readFileSync(nodeFetchServeResolution as string, 'utf8')).toContain(bundledCjsFile)
   })
 
   it('builds bundled deps only when requested', async () => {

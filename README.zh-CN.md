@@ -45,7 +45,7 @@ npm i vite-plugin-electron-renderer -D
 > **Breaking change (v1)**:
 >
 > - 已移除 Vite < 8 支持。
-> - `resolve.*.type: 'esm'` 现在会使用 `createRequire()` 包装纯 ESM 包，而不再通过 esbuild 预构建成 CJS。这要求 Electron 内置的 Node 支持 `require(esm)`，推荐使用 **Electron 35+（Node 22+）**；在 Electron 30–34 上需要 `--experimental-require-module` 标志。包含顶层 `await` 的包不受支持。
+> - `resolve.*.type: 'esm'` 现在改用 `createRequire()` 处理纯 ESM 包。**Electron 35+（Node 22+）是必需条件**；`prebuildEsm: true` 是兼容 Electron < 35 的选项。
 >
 > 旧行为请使用 v0.14.7。
 
@@ -67,6 +67,8 @@ import renderer from 'vite-plugin-electron-renderer'
 export default {
   plugins: [
     renderer({
+      // 兼容 Electron < 35
+      prebuildEsm: true,
       resolve: {
         // C/C++ 模块应保持通过 require() 加载
         serialport: { type: 'cjs' },
@@ -88,6 +90,12 @@ export default {
 
 ```ts
 export interface RendererOptions {
+  /**
+    * 兼容 Electron < 35 的选项。
+    * 在 dev 阶段把 `resolve.*.type = 'esm'` 的依赖预构建成 CJS，
+    * 这样生成的 shim 仍然可以走普通 `require()`。
+   */
+  prebuildEsm?: boolean
   /**
    * 明确告诉 Vite 如何加载模块，这对 C/C++ 和 `esm` 模块非常有用
    *
@@ -174,6 +182,8 @@ export const SerialPort = _M_.SerialPort
 ```
 
 配置为 `esm` 的模块默认会在生产构建中打包。设置 `bundle: false` 后会保留运行时 shim 路径，通过 `createRequire()` 包装（Electron 内置的 Node 22+ 支持 `require(esm)`），并按构建时静态推断到的名称重新导出。如果推断失败，shim 会回退为动态的 `export *`。
+
+`prebuildEsm: true` 是兼容 Electron < 35 的选项。插件会复用内部依赖构建流程，在 dev 阶段先把已配置的 `type: 'esm'` 依赖预构建成 CJS，然后继续对这个 CJS 产物提供原来的 renderer shim。
 
 ## dependencies 与 devDependencies
 

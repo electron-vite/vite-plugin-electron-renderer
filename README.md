@@ -45,7 +45,7 @@ npm i vite-plugin-electron-renderer -D
 > **Breaking change (v1)**:
 >
 > - Drop Vite < 8 support.
-> - `resolve.*.type: 'esm'` now wraps pure-ESM packages with `createRequire()` instead of pre-bundling them to CJS via esbuild. This requires Electron's embedded Node to support `require(esm)` — **Electron 35+ (Node 22+) is recommended**; on Electron 30–34 the `--experimental-require-module` flag is needed. Packages that contain top-level `await` are not supported.
+> - `resolve.*.type: 'esm'` now uses `createRequire()` for pure-ESM packages. **Electron 35+ (Node 22+) is required**; `prebuildEsm: true` is the compatibility option for Electron < 35.
 >
 > For old behavior, use v0.14.7 instead.
 
@@ -67,6 +67,8 @@ import renderer from 'vite-plugin-electron-renderer'
 export default {
   plugins: [
     renderer({
+      // Compatibility option for Electron < 35
+      prebuildEsm: true,
       resolve: {
         // C/C++ modules should stay on require()
         serialport: { type: 'cjs' },
@@ -88,6 +90,12 @@ export default {
 
 ```ts
 export interface RendererOptions {
+  /**
+    * Compatibility option for Electron < 35.
+    * Pre-build `resolve.*.type = 'esm'` deps to CJS during dev so the shim can
+    * stay on plain `require()`.
+   */
+  prebuildEsm?: boolean
   /**
    * Explicitly tell Vite how to load modules, which is very useful for C/C++ and `esm` modules
    *
@@ -179,6 +187,8 @@ export const SerialPort = _M_.SerialPort
 ```
 
 Modules configured as `esm` are bundled in production builds by default. Set `bundle: false` to keep them on the runtime shim path, where they are wrapped with `createRequire()` (Electron's embedded Node 22+ supports `require(esm)`) and re-exported with their statically introspected names. If introspection fails at build time, the shim falls back to a dynamic `export *`.
+
+`prebuildEsm: true` is a compatibility option for Electron < 35. In that mode, the plugin reuses its internal dependency build path to pre-build configured `type: 'esm'` dependencies to CJS during dev, then serves the usual renderer shim on top of that CJS output.
 
 <!--
 **By the way**. If an npm package is a pure ESM format package, and the packages it depends on are also in ESM format, then put it in `optimizeDeps.exclude` and it will work normally.

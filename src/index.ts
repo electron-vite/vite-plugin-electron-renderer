@@ -27,11 +27,20 @@ const ALL_BUILTINS = [
 const CACHE_DIR = '/.vite-electron-renderer'
 const BUNDLE_ENTRY_DIR = `${CACHE_DIR}/entries`
 const BUNDLE_OUT_DIR = `${CACHE_DIR}/bundled`
+const BUNDLE_CJS_OUT_DIR = `${CACHE_DIR}/bundled-cjs`
 const TAG = '[electron-renderer]'
 const RE_ESCAPE = /[\\^$.*+?()[\]{}|]/g
 const SCRIPT_EXT_RE = /\.[cm]?[jt]sx?(?:[?#].*)?$/
 
+type BundleFormat = 'es' | 'cjs'
+
 export interface RendererOptions {
+  /**
+   * Electron 35+ is required for runtime `require(esm)`.
+   * Use this compatibility option for Electron < 35 to pre-build
+   * `resolve.*.type = 'esm'` deps to CJS during dev.
+   */
+  prebuildEsm?: boolean
   /**
    * Explicitly tell Vite how to load modules, which is very useful for C/C++ and `esm` modules
    *
@@ -73,6 +82,7 @@ function createRenderer(options: RendererOptions, isWorker: boolean): VitePlugin
   const bundledBuildPromises = new Map<string, Promise<string>>()
   let bundledEntryDir: string
   let bundledOutDir: string
+  let bundledCjsOutDir: string
 
   const resolveOptions = options.resolve ?? {}
   const resolveEntries = Object.entries(resolveOptions)
@@ -91,13 +101,17 @@ function createRenderer(options: RendererOptions, isWorker: boolean): VitePlugin
   const bundledModuleSet = new Set(bundledModules)
   const shimmedModuleSet = new Set(shimmedModules)
 
-  function bundleDependency(source: string): Promise<string> {
-    const cached = bundledModuleCache.get(source)
+  function bundleDependency(source: string, format: BundleFormat = 'es'): Promise<string> {
+    const cacheKey = `${format}:${source}`
+    const outDir = format === 'cjs' ? bundledCjsOutDir : bundledOutDir
+    const extension = format === 'cjs' ? '.cjs' : '.mjs'
+
+    const cached = bundledModuleCache.get(cacheKey)
     if (cached) {
       return Promise.resolve(cached)
     }
 
-    const pending = bundledBuildPromises.get(source)
+    const pending = bundledBuildPromises.get(cacheKey)
     if (pending) {
       return pending
     }
@@ -111,17 +125,17 @@ export * from ${JSON.stringify(source)};
 `,
     )
 
-    logger.info(`Bundle resolve dep: ${source}`, { timestamp: true })
+    logger.info(`Bundle resolve dep: ${source} -> ${format}`, { timestamp: true })
 
     const promise = viteBuild({
       configFile: false,
       root,
       publicDir: false,
       logLevel: 'error',
-      cacheDir: path.join(bundledOutDir, '.vite'),
+      cacheDir: path.join(outDir, '.vite'),
       resolve: {
         alias: resolvedConfig.resolve.alias,
-        conditions: ['node', ...resolvedConfig.resolve.conditions],
+        conditions: ['node', ...(resolvedConfig.resolve.conditions ?? [])],
       },
       build: {
         copyPublicDir: false,
@@ -130,39 +144,41 @@ export * from ${JSON.stringify(source)};
           entry: {
             [path.basename(entryFile, '.mjs')]: entryFile,
           },
-          formats: ['es'],
+          formats: [format],
         },
+        minify: isBuild,
         modulePreload: false,
-        outDir: bundledOutDir,
+        outDir,
         target: 'esnext',
         rolldownOptions: {
           external: shimmedModules,
           output: {
-            entryFileNames: '[name].mjs',
-            chunkFileNames: 'chunks/[name]-[hash].mjs',
+            entryFileNames: `[name]${extension}`,
+            chunkFileNames: `chunks/[name]-[hash]${extension}`,
             exports: 'named',
           },
         },
       },
     })
       .then(() => {
-        const bundledFile = getCacheFile(bundledOutDir, source, '.mjs').filename
+        const bundledFile = getCacheFile(outDir, source, extension).filename
         if (!fs.existsSync(bundledFile)) {
           throw new TypeError(`Missing bundled output for ${JSON.stringify(source)}`)
         }
 
-        bundledModuleCache.set(source, bundledFile)
+        bundledModuleCache.set(cacheKey, bundledFile)
         return bundledFile
       })
-      .catch((error) => {
-        logger.error(`Failed to bundle ${source}: ${error.message}`, { timestamp: true })
+      .catch((error: unknown) => {
+        const message = error instanceof Error ? error.message : String(error)
+        logger.error(`Failed to bundle ${source}: ${message}`, { timestamp: true })
         throw error
       })
       .finally(() => {
-        bundledBuildPromises.delete(source)
+        bundledBuildPromises.delete(cacheKey)
       })
 
-    bundledBuildPromises.set(source, promise)
+    bundledBuildPromises.set(cacheKey, promise)
     return promise
   }
 
@@ -181,6 +197,9 @@ export * from ${JSON.stringify(source)};
         })) ?? `/* ${TAG}: empty */`
       )
     }
+    if (!isBuild && options.prebuildEsm && resolved?.type === 'esm') {
+      return cjsSnippet(await bundleDependency(source, 'cjs'))
+    }
     if (resolved?.type === 'esm') {
       logger.info(`Wrap for ESM dep: ${source}`, { timestamp: true })
       return esmSnippet(source, root)
@@ -189,17 +208,6 @@ export * from ${JSON.stringify(source)};
       logger.info(`Wrap for CJS dep: ${source}`, { timestamp: true })
     }
     return cjsSnippet(source)
-  }
-
-  async function resolveShim(source: string): Promise<string> {
-    const cacheKey = source.startsWith('node:') ? source.slice(5) : source
-    const cached = moduleCache.get(cacheKey)
-    if (cached) {
-      return cached
-    }
-    const resolved = writeGeneratedModule(cacheDir, cacheKey, await buildSnippet(cacheKey))
-    moduleCache.set(cacheKey, resolved)
-    return resolved
   }
 
   const resolvedModulesRegex = new RegExp(
@@ -250,6 +258,7 @@ export * from ${JSON.stringify(source)};
       cacheDir = path.dirname(config.cacheDir) + CACHE_DIR
       bundledEntryDir = path.dirname(config.cacheDir) + BUNDLE_ENTRY_DIR
       bundledOutDir = path.dirname(config.cacheDir) + BUNDLE_OUT_DIR
+      bundledCjsOutDir = path.dirname(config.cacheDir) + BUNDLE_CJS_OUT_DIR
       root = config.root
       resolvedConfig = config
       logger = createLogger(config.logLevel ?? 'info', { prefix: TAG })
@@ -264,7 +273,14 @@ export * from ${JSON.stringify(source)};
         if (isBuild && bundledModuleSet.has(source)) {
           return bundleDependency(source)
         }
-        return resolveShim(source)
+        const cacheKey = source.startsWith('node:') ? source.slice(5) : source
+        const cached = moduleCache.get(cacheKey)
+        if (cached) {
+          return cached
+        }
+        const resolved = writeGeneratedModule(cacheDir, cacheKey, await buildSnippet(cacheKey))
+        moduleCache.set(cacheKey, resolved)
+        return resolved
       },
     },
     transform: {

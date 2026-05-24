@@ -13,8 +13,8 @@ const samples = [
       <p class="eyebrow">vite-plugin-electron-renderer</p>
       <h1 id="app-title">Vue quick start</h1>
       <p class="summary">
-        Use Electron and Node.js APIs from a Vue renderer process while Vite keeps
-        buildable ESM dependencies bundled.
+        Use Electron and Node.js APIs from a Vue renderer process while Vite keeps buildable ESM
+        dependencies bundled.
       </p>
 
       <pre><code>import { ipcRenderer } from 'electron'
@@ -39,7 +39,13 @@ import fs from 'node:fs'</code></pre>
   color: oklch(24% 0.025 255);
   background: oklch(97% 0.012 95);
   font-family:
-    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    sans-serif;
 }
 
 .app {
