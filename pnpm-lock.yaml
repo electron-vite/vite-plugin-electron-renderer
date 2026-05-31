@@ -74,6 +74,9 @@ importers:
 
   examples/quick-start:
     dependencies:
+      node-fetch:
+        specifier: 'catalog:'
+        version: 3.3.2
       serialport:
         specifier: 'catalog:'
         version: 13.0.0
@@ -96,9 +99,6 @@ importers:
       got:
         specifier: ^15.0.3
         version: 15.0.3
-      node-fetch:
-        specifier: 'catalog:'
-        version: 3.3.2
       vite:
         specifier: 'catalog:'
         version: 8.0.13(@types/node@25.6.0)(jiti@2.7.0)(yaml@2.9.0)
