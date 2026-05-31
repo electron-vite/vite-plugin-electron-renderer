@@ -16,6 +16,12 @@ const renderer_resolve: RendererOptions['resolve'] = {
   serialport: { type: 'cjs' },
   'node-fetch': { type: 'esm' },
 }
+const renderer_node_protocol_resolve: RendererOptions['resolve'] = {
+  'node:fs': {
+    type: 'cjs',
+    build: async () => 'export const configured = true',
+  },
+}
 const renderer_multi_bundle_resolve: RendererOptions['resolve'] = {
   'node-fetch': { type: 'esm' },
   'fixture-esm': { type: 'esm' },
@@ -149,6 +155,29 @@ describe('optimizer', async () => {
 
     expect(nodeFetchServeResolution).toBe(path.join(CACHE_DIR, 'node-fetch.mjs'))
     expect(fs.existsSync(path.join(CACHE_DIR, 'node-fetch.mjs'))).toBe(true)
+  })
+
+  it('resolves node: protocol module overrides', async () => {
+    fs.rmSync(CACHE_DIR, { recursive: true, force: true })
+
+    const pluginRenderer = renderer({ resolve: renderer_node_protocol_resolve })
+    await resolveConfig(
+      {
+        configFile: false,
+        root: fixtures,
+        plugins: [pluginRenderer],
+      },
+      'build',
+    )
+
+    const resolveId = getResolveIdHandler(pluginRenderer)
+    const resolution = await resolveId.call(pluginRenderer as any, 'node:fs', undefined, {} as any)
+
+    expect(resolution).toBe(path.join(CACHE_DIR, 'fs.mjs'))
+    expect(fs.existsSync(path.join(CACHE_DIR, 'fs.mjs'))).toBe(true)
+    expect(fs.readFileSync(path.join(CACHE_DIR, 'fs.mjs'), 'utf8')).toContain(
+      'export const configured = true',
+    )
   })
 
   it('falls back to bundled cjs shims for esm deps during dev', async () => {

@@ -86,6 +86,17 @@ function createRenderer(options: RendererOptions, isWorker: boolean): VitePlugin
 
   const resolveOptions = options.resolve ?? {}
   const resolveEntries = Object.entries(resolveOptions)
+  const normalizedResolveOptions = new Map(
+    resolveEntries.flatMap(([module, option]) => {
+      const normalizedModule = module.startsWith('node:') ? module.slice(5) : module
+      return normalizedModule === module
+        ? [[module, option]]
+        : [
+            [module, option],
+            [normalizedModule, option],
+          ]
+    }),
+  )
   const bundledModuleSet = new Set(
     resolveEntries.filter(([, option]) => shouldBundleDependency(option)).map(([module]) => module),
   )
@@ -181,7 +192,7 @@ export * from ${JSON.stringify(source)};
   }
 
   async function buildSnippet(source: string): Promise<string> {
-    const resolved = resolveOptions[source]
+    const resolved = normalizedResolveOptions.get(source)
 
     if (source === 'electron') {
       return electronSnippet
