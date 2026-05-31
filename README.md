@@ -40,12 +40,10 @@ npm i vite-plugin-electron-renderer -D
 ## Usage
 
 > [!important]
-> This plugin is currently in v1 beta development. Use it at your own risk.
->
 > **Breaking change (v1)**:
 >
 > - Drop Vite < 8 support.
-> - `resolve.*.type: 'esm'` now uses `createRequire()` for pure-ESM packages. **Electron 35+ (Node 22+) is required**; `prebuildEsm: true` is the compatibility option for Electron < 35.
+> - `resolve.*.type: 'esm'` now uses `createRequire()` for pure-ESM packages by default, which requires **Electron 35+ (Node 22+)**; `prebuildEsm: true` is the compatibility option for Electron < 35.
 >
 > For old behavior, use v0.14.7 instead.
 
@@ -84,7 +82,7 @@ export default {
 
 > By default, `type: 'cjs'` modules stay on runtime `require()` and should be put into `dependencies`. `type: 'esm'` modules are bundled in production builds unless `bundle: false` is set.
 
-## API _(Define)_
+## API
 
 `renderer(options: RendererOptions)`
 
@@ -159,19 +157,6 @@ export interface RendererOptions {
  ┗————————————————————————————————————————┛                 ┗—————————————————┛
 ```
 
-<!--
-###### Electron-Renderer(vite build)
-
-1. Add "fs module" to `rolldownOptions.external`.
-2. Modify `rolldownOptions.output.format` to `cjs` *(If it you didn't explicitly set it)*.
-
-```js
-import { ipcRenderer } from 'electron'
-↓
-const { ipcRenderer } = require('electron')
-```
--->
-
 ## Dependency Pre-Bundling
 
 **In general**. Vite will pre-bundle all third-party modules in a Web-based usage format, but it can not adapt to Electron Renderer process especially C/C++ modules. So we must be make a little changes for this.
@@ -189,11 +174,6 @@ export const SerialPort = _M_.SerialPort
 Modules configured as `esm` are bundled in production builds by default. Set `bundle: false` to keep them on the runtime shim path, where they are wrapped with `createRequire()` (Electron's embedded Node 22+ supports `require(esm)`) and re-exported with their statically introspected names. If introspection fails at build time, the shim falls back to a dynamic `export *`.
 
 `prebuildEsm: true` is a compatibility option for Electron < 35. In that mode, the plugin reuses its internal dependency build path to pre-build configured `type: 'esm'` dependencies to CJS during dev, then serves the usual renderer shim on top of that CJS output.
-
-<!--
-**By the way**. If an npm package is a pure ESM format package, and the packages it depends on are also in ESM format, then put it in `optimizeDeps.exclude` and it will work normally.
-[See the explanation](https://github.com/electron-vite/vite-plugin-electron-renderer/blob/v0.10.3/examples/quick-start/vite.config.ts#L33-L36)
--->
 
 ## dependencies vs devDependencies
 
@@ -235,14 +215,3 @@ Modules configured as `esm` are bundled in production builds by default. Set `bu
 #### Why is it recommended to put properly buildable packages in `devDependencies`?
 
 Doing so will reduce the size of the packaged APP by [electron-builder](https://github.com/electron-userland/electron-builder).
-
-<!--
-## Config presets (Opinionated)
-
-If you do not configure the following options, the plugin will modify their default values
-
-- `build.cssCodeSplit = false` (*TODO*)
-- `build.rolldownOptions.output.format = 'cjs'` (nodeIntegration: true)
-- `resolve.conditions = ['node']`
-- `optimizeDeps.exclude = ['electron']` - always
--->

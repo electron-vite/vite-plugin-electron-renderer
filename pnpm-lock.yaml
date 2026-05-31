@@ -22,8 +22,8 @@ catalogs:
       specifier: ^8.0.13
       version: 8.0.13
     vite-plugin-electron:
-      specifier: ^1.0.0-beta.13
-      version: 1.0.0-beta.13
+      specifier: ^1.0.0-beta.15
+      version: 1.0.0-beta.15
 
 overrides:
   '@electron/asar': ^4.2.0
@@ -70,7 +70,7 @@ importers:
         version: 8.0.13(@types/node@25.6.0)(jiti@2.7.0)(yaml@2.9.0)
       vite-plugin-electron:
         specifier: 'catalog:'
-        version: 1.0.0-beta.13
+        version: 1.0.0-beta.15
 
   examples/quick-start:
     dependencies:
@@ -104,7 +104,7 @@ importers:
         version: 8.0.13(@types/node@25.6.0)(jiti@2.7.0)(yaml@2.9.0)
       vite-plugin-electron:
         specifier: 'catalog:'
-        version: 1.0.0-beta.13
+        version: 1.0.0-beta.15
       vue:
         specifier: ^3.5.24
         version: 3.5.34(typescript@6.0.3)
@@ -122,7 +122,7 @@ importers:
         version: 8.0.13(@types/node@25.6.0)(jiti@2.7.0)(yaml@2.9.0)
       vite-plugin-electron:
         specifier: 'catalog:'
-        version: 1.0.0-beta.13
+        version: 1.0.0-beta.15
 
   test/fixtures:
     dependencies:
@@ -1972,8 +1972,8 @@ packages:
   util-deprecate@1.0.2:
     resolution: {integrity: sha512-EPD5q1uXyFxJpCrLnCc1nHnq3gOa6DZBocAIiI2TaSCA7VCJ1UJDMagCzIkXNsUYfD1daK//LTEQ8xiIbrHtcw==}
 
-  vite-plugin-electron@1.0.0-beta.13:
-    resolution: {integrity: sha512-d1Ly7ncMBMCRy2v0KRNR9YMIhlDp4zm+VG4eAG8ytCvn9YE4QHHt4jQCNkTq1FztzqOkmfczpeca/pXAQPYoRA==}
+  vite-plugin-electron@1.0.0-beta.15:
+    resolution: {integrity: sha512-3sFdwDYJpQsCKtOmkYbIaUWTih5WgUoRHP2gocW7Buc/hRzH+vegdsoYG9IRJ8RWOujaTyT5bnVDqcgr7vPmjg==}
     peerDependencies:
       vite-plugin-electron-renderer: '*'
     peerDependenciesMeta:
@@ -3741,7 +3741,7 @@ snapshots:
 
   util-deprecate@1.0.2: {}
 
-  vite-plugin-electron@1.0.0-beta.13:
+  vite-plugin-electron@1.0.0-beta.15:
     dependencies:
       local-pkg: 1.2.0
 

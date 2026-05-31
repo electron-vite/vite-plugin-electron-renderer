@@ -26,6 +26,11 @@
 
 <br/>
 
+> [!warning]
+> 在 Electron 中不推荐使用 `nodeIntegration`，而且这个插件并不能解决它可能带来的安全问题。如果你要使用这个插件，请先明确启用 `nodeIntegration` 的安全影响，并采取相应的缓解措施。
+
+简而言之，`vite-plugin-electron-renderer` 的职责是为渲染进程填充 Electron、Node.js 内置模块以及其他 npm 包。
+
 ## 安装
 
 ```sh
@@ -34,18 +39,11 @@ npm i vite-plugin-electron-renderer -D
 
 ## 用法
 
-> [!warning]
-> 在 Electron 中不推荐使用 `nodeIntegration`，而且这个插件并不能解决它可能带来的安全问题。如果你要使用这个插件，请先明确启用 `nodeIntegration` 的安全影响，并采取相应的缓解措施。
-
-简而言之，`vite-plugin-electron-renderer` 的职责是为渲染进程填充 Electron、Node.js 内置模块以及其他 npm 包。
-
 > [!important]
-> 这个插件目前处于 v1 beta 开发阶段。请自行承担使用风险。
->
 > **Breaking change (v1)**:
 >
 > - 已移除 Vite < 8 支持。
-> - `resolve.*.type: 'esm'` 现在改用 `createRequire()` 处理纯 ESM 包。**Electron 35+（Node 22+）是必需条件**；`prebuildEsm: true` 是兼容 Electron < 35 的选项。
+> - `resolve.*.type: 'esm'` 现在默认使用 `createRequire()` 处理纯 ESM 包，**Electron 35+（Node 22+）**是必需条件；`prebuildEsm: true` 是兼容 Electron < 35 的选项。
 >
 > 旧行为请使用 v0.14.7。
 
@@ -84,7 +82,7 @@ export default {
 
 > 默认情况下，`type: 'cjs'` 模块会保持运行时 `require()`，应放在 `dependencies` 中。`type: 'esm'` 模块会在生产构建中打包，除非设置 `bundle: false`。
 
-## API _(定义)_
+## API
 
 `renderer(options: RendererOptions)`
 
