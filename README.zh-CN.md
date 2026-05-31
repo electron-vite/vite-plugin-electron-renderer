@@ -45,6 +45,8 @@ npm i vite-plugin-electron-renderer -D
 > - 已移除 Vite < 8 支持。
 > - `resolve.*.type: 'esm'` 现在默认使用 `createRequire()` 处理纯 ESM 包，**Electron 35+（Node 22+）**是必需条件；`prebuildEsm: true` 是兼容 Electron < 35 的选项。
 >
+> 详细迁移指南请参见 [Migrate to v1](./migrate-to-v1.md)。
+>
 > 旧行为请使用 v0.14.7。
 
 1. 这只会修改 Vite 的部分默认配置，让 Renderer 进程可以正常工作。
@@ -99,8 +101,6 @@ export interface RendererOptions {
    *
    * - `type.cjs` 通过 `require()` 加载，并在可能时暴露静态已知的命名导出
    * - `type.esm` 通过 `createRequire()` 加载，并在可能时暴露静态已知的命名导出（如果推断失败，则回退到动态 `export *`）
-   *
-   * @experimental
    */
   resolve?: {
     [module: string]: {
@@ -134,19 +134,19 @@ export interface RendererOptions {
  │ import { ipcRenderer } from 'electron' │                 │ Vite dev server │
  ┗————————————————————————————————————————┛                 ┗—————————————————┛
                  │                                                   │
-                 │ 1. 首次解析时生成 electron shim                  │
+                 │ 1. 首次解析时生成 electron shim                   │
                  │    node_modules/.vite-electron-renderer/electron  │
                  │                                                   │
-                 │ 2. HTTP（请求）：electron 模块                   │
+                 │ 2. HTTP（请求）：electron 模块                    │
                  │ ————————————————————————————————————————————————> │
                  │                                                   │
-                 │ 3. resolveId() 重定向到                          │
+                 │ 3. resolveId() 重定向到                           │
                  │    node_modules/.vite-electron-renderer/electron  │
                  │    ↓                                              │
                  │    const { ipcRenderer } = require('electron')    │
                  │    export { ipcRenderer }                         │
                  │                                                   │
-                 │ 4. HTTP（响应）：electron 模块                   │
+                 │ 4. HTTP（响应）：electron 模块                    │
                  │ <———————————————————————————————————————————————— │
                  │                                                   │
  ┏————————————————————————————————————————┓                 ┏—————————————————┓
@@ -185,6 +185,8 @@ export const SerialPort = _M_.SerialPort
 
 ## dependencies 与 devDependencies
 
+[electron-builder](https://github.com/electron-userland/electron-builder) 会把 `dependencies` 打包到最终的应用中，vite/rolldown 也可能把 `dependencies` 打包到前端文件输出中。为了避免重复打包同一份代码，原本应该放在 `devDependencies` 中的可构建模块必须放在 `dependencies` 中，因为 electron-builder 需要收集它们的二进制文件。其他所有可构建模块应该保持在 `devDependencies` 中，否则它们可能会被 Vite 打包并再次被 electron-builder 打包。
+
 <table>
   <thead>
     <th>分类</th>
@@ -202,24 +204,22 @@ export const SerialPort = _M_.SerialPort
     <tr>
       <td>Node.js CJS 包</td>
       <td>electron-store</td>
-      <td>✅</td>
+      <td>❌</td>
       <td>✅</td>
     </tr>
     <tr>
       <td>Node.js ESM 包</td>
       <td>execa, got, node-fetch</td>
+      <td>❌</td>
       <td>✅</td>
-      <td>✅ (推荐)</td>
     </tr>
     <tr>
       <td>Web 包</td>
       <td>Vue, React</td>
+      <td>❌</td>
       <td>✅</td>
-      <td>✅ (推荐)</td>
     </tr>
   </tbody>
 </table>
 
-#### 为啥推荐将可以正确构建的包放到 `devDependencies` 中？
-
-这样做会减小 [electron-builder](https://github.com/electron-userland/electron-builder) 打包后的应用体积。
+如果你手动处理了原生模块的二进制文件和运行时依赖布局，你也可以把那些原生模块移到 `devDependencies` 中，以进一步减少打包后的应用大小。

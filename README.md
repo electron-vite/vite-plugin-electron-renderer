@@ -45,6 +45,8 @@ npm i vite-plugin-electron-renderer -D
 > - Drop Vite < 8 support.
 > - `resolve.*.type: 'esm'` now uses `createRequire()` for pure-ESM packages by default, which requires **Electron 35+ (Node 22+)**; `prebuildEsm: true` is the compatibility option for Electron < 35.
 >
+> See [Migrate to v1](./migrate-to-v1.md) for the full migration guide.
+>
 > For old behavior, use v0.14.7 instead.
 
 1. This just modifies some of Vite's default config to make the Renderer process works.
@@ -99,8 +101,6 @@ export interface RendererOptions {
    *
    * - `type.cjs` loads through `require()` and exposes statically known names when possible
    * - `type.esm` loads through `createRequire()` and exposes statically known names when possible (falls back to dynamic `export *` when introspection fails)
-   *
-   * @experimental
    */
   resolve?: {
     [module: string]: {
@@ -177,6 +177,8 @@ Modules configured as `esm` are bundled in production builds by default. Set `bu
 
 ## dependencies vs devDependencies
 
+[electron-builder](https://github.com/electron-userland/electron-builder) packages `dependencies` into the final app, and vite/rolldown may also bundle `dependencies` into the renderer output. To avoid shipping the same code twice, native modules must stay in `dependencies` by default because electron-builder needs to collect their binary files. Other buildable modules should stay in `devDependencies`, otherwise they can be bundled by Vite and packaged again by electron-builder.
+
 <table>
   <thead>
     <th>Classify</th>
@@ -194,24 +196,22 @@ Modules configured as `esm` are bundled in production builds by default. Set `bu
     <tr>
       <td>Node.js CJS packages</td>
       <td>electron-store</td>
-      <td>✅</td>
+      <td>❌</td>
       <td>✅</td>
     </tr>
     <tr>
       <td>Node.js ESM packages</td>
       <td>execa, got, node-fetch</td>
+      <td>❌</td>
       <td>✅</td>
-      <td>✅ (Recommend)</td>
     </tr>
     <tr>
       <td>Web packages</td>
       <td>Vue, React</td>
+      <td>❌</td>
       <td>✅</td>
-      <td>✅ (Recommend)</td>
     </tr>
   </tbody>
 </table>
 
-#### Why is it recommended to put properly buildable packages in `devDependencies`?
-
-Doing so will reduce the size of the packaged APP by [electron-builder](https://github.com/electron-userland/electron-builder).
+If you manually handle the binary files and runtime dependency layout for native modules, you can also move those native modules to `devDependencies` to further reduce the packaged app size.
